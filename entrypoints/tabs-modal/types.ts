@@ -8,6 +8,7 @@ export interface Tab {
   tags?: string[];
   labels?: string[];
   customTitle?: string | null;
+  isBookmark?: boolean;
 }
 
 // Define props for the App component
@@ -19,7 +20,7 @@ export interface AppProps {
 export interface TabsListProps {
   tabs: Tab[];
   onTabClick: (tabId: number) => void;
-  selectedTabId?: number | null;
+  selectedTabIds?: number[];
   onRemoveTag?: (tabId: number, tag: string) => void;
   onEditTab?: (tab: Tab) => void;
 }

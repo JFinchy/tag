@@ -4,24 +4,24 @@ import { TabsListProps } from "../types";
 const TabsList: React.FC<TabsListProps> = ({
   tabs,
   onTabClick,
-  selectedTabId,
+  selectedTabIds = [],
   onRemoveTag,
   onEditTab,
 }) => {
   if (tabs.length === 0) {
-    return <div>No tabs found</div>;
+    return <div>No tabs or bookmarks found</div>;
   }
 
   return (
     <div className="tabs-list">
       {tabs.map((tab) => {
-        const isSelected = selectedTabId === tab.id;
+        const isSelected = selectedTabIds.includes(tab.id);
         const displayTitle = tab.customTitle || tab.title;
 
         return (
           <div
             key={tab.id}
-            className={`tab-item ${tab.active ? "tab-item-active" : ""} ${isSelected ? "tab-item-selected" : ""}`}
+            className={`tab-item ${tab.active ? "tab-item-active" : ""} ${isSelected ? "tab-item-selected" : ""} ${tab.isBookmark ? "tab-item-bookmark" : ""}`}
             onClick={() => onTabClick(tab.id)}
           >
             <div className="tab-item-content">
@@ -53,12 +53,16 @@ const TabsList: React.FC<TabsListProps> = ({
               </div>
             </div>
 
-            {tab.tags && tab.tags.length > 0 && (
-              <div className="tab-item-meta">
-                {tab.active && (
-                  <span className="tab-active-indicator">Active</span>
-                )}
-                {tab.tags.map((tag, index) => (
+            <div className="tab-item-meta">
+              {tab.active && !tab.isBookmark && (
+                <span className="tab-active-indicator">Active</span>
+              )}
+              {tab.isBookmark && (
+                <span className="tab-bookmark-indicator">Bookmark</span>
+              )}
+              {tab.tags &&
+                tab.tags.length > 0 &&
+                tab.tags.map((tag, index) => (
                   <span key={`tag-${index}`} className="tag">
                     {tag}
                     {onRemoveTag && isSelected && (
@@ -74,13 +78,12 @@ const TabsList: React.FC<TabsListProps> = ({
                     )}
                   </span>
                 ))}
-                {tab.labels?.map((label, index) => (
-                  <span key={`label-${index}`} className="label">
-                    {label}
-                  </span>
-                ))}
-              </div>
-            )}
+              {tab.labels?.map((label, index) => (
+                <span key={`label-${index}`} className="label">
+                  {label}
+                </span>
+              ))}
+            </div>
           </div>
         );
       })}

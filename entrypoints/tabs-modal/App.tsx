@@ -16,15 +16,56 @@ import React, { useEffect, useState } from "react";
 
 import TabsList from "./components/TabsList";
 
+// Define the browser API for TypeScript
+declare namespace browser {
+  namespace bookmarks {
+    interface BookmarkTreeNode {
+      id: string;
+      parentId?: string;
+      index?: number;
+      url?: string;
+      title: string;
+      dateAdded?: number;
+      dateGroupModified?: number;
+      type?: "bookmark" | "folder" | "separator";
+      children?: BookmarkTreeNode[];
+    }
+
+    function getTree(): Promise<BookmarkTreeNode[]>;
+  }
+
+  namespace tabs {
+    function update(
+      tabId: number,
+      updateProperties: { active: boolean },
+    ): Promise<Tab>;
+    function create(createProperties: { url: string }): Promise<Tab>;
+  }
+
+  namespace runtime {
+    function sendMessage(message: any): Promise<any>;
+  }
+
+  namespace storage {
+    interface StorageArea {
+      get(keys: string | string[] | null): Promise<{ [key: string]: any }>;
+      set(items: { [key: string]: any }): Promise<void>;
+    }
+    const local: StorageArea;
+  }
+}
+
 const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
+  const [bookmarks, setBookmarks] = useState<Tab[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTabId, setSelectedTabId] = useState<number | null>(null);
+  const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [newTag, setNewTag] = useState("");
   const [allTags, setAllTags] = useState<string[]>([]);
   const [editingTab, setEditingTab] = useState<Tab | null>(null);
   const [editedTitle, setEditedTitle] = useState("");
+  const [showBookmarks, setShowBookmarks] = useState(true);
 
   useEffect(() => {
     // Add keyboard shortcut listener
@@ -68,7 +109,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
       setTabs(updatedTabs);
 
       // Update all tags list
-      updateAllTagsList(updatedTabs);
+      updateAllTagsList([...updatedTabs, ...bookmarks]);
     };
 
     // TypeScript requires this cast for CustomEvent
@@ -83,17 +124,22 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
         handleTabsUpdated as EventListener,
       );
     };
-  }, [tabs]);
+  }, [tabs, bookmarks]);
 
   useEffect(() => {
     // If we don't have initial tabs, fetch them when modal becomes visible
-    if (isVisible && tabs.length === 0) {
-      fetchTabs();
+    if (isVisible) {
+      if (tabs.length === 0) {
+        fetchTabs();
+      }
+      if (bookmarks.length === 0 && showBookmarks) {
+        fetchBookmarks();
+      }
     }
 
     // Update all tags list when tabs change
-    updateAllTagsList(tabs);
-  }, [isVisible, tabs.length]);
+    updateAllTagsList([...tabs, ...bookmarks]);
+  }, [isVisible, tabs.length, bookmarks.length, showBookmarks]);
 
   const updateAllTagsList = (tabsArray: Tab[]) => {
     const tagsSet = new Set<string>();
@@ -111,6 +157,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
         tags: [],
         labels: [],
         customTitle: null,
+        isBookmark: false,
       }));
       setTabs(tabsWithTags);
     } catch (error) {
@@ -118,14 +165,53 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     }
   };
 
-  const filteredTabs = tabs.filter((tab) => {
+  const fetchBookmarks = async () => {
+    try {
+      const bookmarkTree = await browser.bookmarks.getTree();
+      const flattenedBookmarks: Tab[] = [];
+
+      // Recursive function to flatten bookmark tree
+      const flattenBookmarks = (
+        nodes: browser.bookmarks.BookmarkTreeNode[],
+      ) => {
+        for (const node of nodes) {
+          if (node.url) {
+            // It's a bookmark
+            flattenedBookmarks.push({
+              id: parseInt(node.id), // Convert string ID to number
+              title: node.title,
+              url: node.url,
+              active: false,
+              tags: [],
+              labels: [],
+              customTitle: null,
+              isBookmark: true,
+            });
+          }
+
+          if (node.children) {
+            flattenBookmarks(node.children);
+          }
+        }
+      };
+
+      flattenBookmarks(bookmarkTree);
+      setBookmarks(flattenedBookmarks);
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error);
+    }
+  };
+
+  const allItems = [...tabs, ...(showBookmarks ? bookmarks : [])];
+
+  const filteredItems = allItems.filter((item) => {
     const query = searchQuery.toLowerCase();
-    const title = tab.customTitle || tab.title;
+    const title = item.customTitle || item.title;
     return (
       title.toLowerCase().includes(query) ||
-      tab.url.toLowerCase().includes(query) ||
-      tab.tags?.some((tag) => tag.toLowerCase().includes(query)) ||
-      tab.labels?.some((label) => label.toLowerCase().includes(query))
+      item.url.toLowerCase().includes(query) ||
+      item.tags?.some((tag) => tag.toLowerCase().includes(query)) ||
+      item.labels?.some((label) => label.toLowerCase().includes(query))
     );
   });
 
@@ -133,75 +219,94 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     // If we're in edit mode, don't do anything
     if (editingTab) return;
 
-    // If we're in tag management mode, select the tab instead of navigating
+    // If we're in tag management mode, toggle selection
     if (isVisible) {
-      setSelectedTabId(tabId === selectedTabId ? null : tabId);
+      setSelectedTabIds((prevSelectedIds) => {
+        if (prevSelectedIds.includes(tabId)) {
+          return prevSelectedIds.filter((id) => id !== tabId);
+        } else {
+          return [...prevSelectedIds, tabId];
+        }
+      });
     } else {
-      browser.tabs.update(tabId, { active: true });
+      // If it's a bookmark, open it in a new tab
+      const clickedItem = allItems.find((item) => item.id === tabId);
+      if (clickedItem?.isBookmark) {
+        browser.tabs.create({ url: clickedItem.url });
+      } else {
+        // Otherwise, activate the tab
+        browser.tabs.update(tabId, { active: true });
+      }
     }
   };
 
   const handleAddTag = () => {
-    if (!newTag.trim()) return;
+    if (!newTag.trim() || selectedTabIds.length === 0) return;
 
-    // If we're in edit mode, add tag to the editing tab
-    if (editingTab) {
-      setEditingTab((prevTab) => {
-        if (!prevTab) return null;
-
-        const updatedTags = [...(prevTab.tags || [])];
-        if (!updatedTags.includes(newTag.trim())) {
-          updatedTags.push(newTag.trim());
-        }
-
-        // Update the tabs state as well
-        setTabs((prevTabs) =>
-          prevTabs.map((tab) => {
-            if (tab.id === prevTab.id) {
-              return { ...tab, tags: updatedTags };
-            }
-            return tab;
-          }),
-        );
-
-        return { ...prevTab, tags: updatedTags };
-      });
-    }
-    // Otherwise add tag to the selected tab
-    else if (selectedTabId) {
-      setTabs((prevTabs) =>
-        prevTabs.map((tab) => {
-          if (tab.id === selectedTabId) {
-            const updatedTags = [...(tab.tags || [])];
-            if (!updatedTags.includes(newTag.trim())) {
-              updatedTags.push(newTag.trim());
-            }
-            return { ...tab, tags: updatedTags };
+    // Add tag to all selected tabs
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        if (selectedTabIds.includes(tab.id)) {
+          const updatedTags = [...(tab.tags || [])];
+          if (!updatedTags.includes(newTag.trim())) {
+            updatedTags.push(newTag.trim());
           }
-          return tab;
-        }),
-      );
-    }
+          return { ...tab, tags: updatedTags };
+        }
+        return tab;
+      }),
+    );
+
+    // Add tag to selected bookmarks
+    setBookmarks((prevBookmarks) =>
+      prevBookmarks.map((bookmark) => {
+        if (selectedTabIds.includes(bookmark.id)) {
+          const updatedTags = [...(bookmark.tags || [])];
+          if (!updatedTags.includes(newTag.trim())) {
+            updatedTags.push(newTag.trim());
+          }
+          return { ...bookmark, tags: updatedTags };
+        }
+        return bookmark;
+      }),
+    );
 
     setNewTag("");
-    updateAllTagsList(tabs);
+    updateAllTagsList([...tabs, ...bookmarks]);
 
     // Save tags to storage
     saveTabsData();
   };
 
   const handleRemoveTag = (tabId: number, tagToRemove: string) => {
-    setTabs((prevTabs) =>
-      prevTabs.map((tab) => {
-        if (tab.id === tabId) {
-          return {
-            ...tab,
-            tags: (tab.tags || []).filter((tag) => tag !== tagToRemove),
-          };
-        }
-        return tab;
-      }),
-    );
+    // Check if it's a tab or bookmark
+    const isBookmark = bookmarks.some((b) => b.id === tabId);
+
+    if (isBookmark) {
+      setBookmarks((prevBookmarks) =>
+        prevBookmarks.map((bookmark) => {
+          if (bookmark.id === tabId) {
+            return {
+              ...bookmark,
+              tags: (bookmark.tags || []).filter((tag) => tag !== tagToRemove),
+            };
+          }
+          return bookmark;
+        }),
+      );
+    } else {
+      setTabs((prevTabs) =>
+        prevTabs.map((tab) => {
+          if (tab.id === tabId) {
+            return {
+              ...tab,
+              tags: (tab.tags || []).filter((tag) => tag !== tagToRemove),
+            };
+          }
+          return tab;
+        }),
+      );
+    }
 
     // If we're in edit mode, update the editing tab state as well
     if (editingTab && editingTab.id === tabId) {
@@ -226,17 +331,31 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   const handleSaveEdit = () => {
     if (!editingTab) return;
 
-    setTabs((prevTabs) =>
-      prevTabs.map((tab) => {
-        if (tab.id === editingTab.id) {
-          return {
-            ...tab,
-            customTitle: editedTitle.trim() || null,
-          };
-        }
-        return tab;
-      }),
-    );
+    if (editingTab.isBookmark) {
+      setBookmarks((prevBookmarks) =>
+        prevBookmarks.map((bookmark) => {
+          if (bookmark.id === editingTab.id) {
+            return {
+              ...bookmark,
+              customTitle: editedTitle.trim() || null,
+            };
+          }
+          return bookmark;
+        }),
+      );
+    } else {
+      setTabs((prevTabs) =>
+        prevTabs.map((tab) => {
+          if (tab.id === editingTab.id) {
+            return {
+              ...tab,
+              customTitle: editedTitle.trim() || null,
+            };
+          }
+          return tab;
+        }),
+      );
+    }
 
     setEditingTab(null);
     saveTabsData();
@@ -245,20 +364,20 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   const saveTabsData = async () => {
     try {
       // Create a map of tabId -> data for storage
-      const tabsData = tabs.reduce(
-        (acc, tab) => {
+      const tabsData = [...tabs, ...bookmarks].reduce(
+        (acc, item) => {
           const data: Record<string, unknown> = {};
 
-          if (tab.tags && tab.tags.length > 0) {
-            data.tags = tab.tags;
+          if (item.tags && item.tags.length > 0) {
+            data.tags = item.tags;
           }
 
-          if (tab.customTitle) {
-            data.customTitle = tab.customTitle;
+          if (item.customTitle) {
+            data.customTitle = item.customTitle;
           }
 
           if (Object.keys(data).length > 0) {
-            acc[tab.id] = data;
+            acc[item.id] = data;
           }
 
           return acc;
@@ -290,6 +409,19 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
           };
         }),
       );
+
+      setBookmarks((prevBookmarks) =>
+        prevBookmarks.map((bookmark) => {
+          const data = storedData[bookmark.id];
+          if (!data) return bookmark;
+
+          return {
+            ...bookmark,
+            tags: (data.tags as string[]) || [],
+            customTitle: (data.customTitle as string) || null,
+          };
+        }),
+      );
     } catch (error) {
       console.error("Error loading tabs data:", error);
     }
@@ -297,7 +429,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
   // Load tags when tabs are first loaded
   useEffect(() => {
-    if (tabs.length > 0) {
+    if (tabs.length > 0 || bookmarks.length > 0) {
       loadTabsData();
     }
   }, [initialTabs]);
@@ -307,12 +439,18 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   };
 
   const handleApplyTagToAll = () => {
-    if (!newTag.trim() || filteredTabs.length === 0) return;
+    if (!newTag.trim() || filteredItems.length === 0) return;
 
+    // Add tag to all filtered tabs
     setTabs((prevTabs) =>
       prevTabs.map((tab) => {
         // Only apply to filtered tabs
-        if (filteredTabs.some((filteredTab) => filteredTab.id === tab.id)) {
+        if (
+          filteredItems.some(
+            (filteredItem) =>
+              filteredItem.id === tab.id && !filteredItem.isBookmark,
+          )
+        ) {
           const updatedTags = [...(tab.tags || [])];
           if (!updatedTags.includes(newTag.trim())) {
             updatedTags.push(newTag.trim());
@@ -323,9 +461,55 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
       }),
     );
 
+    // Add tag to all filtered bookmarks
+    setBookmarks((prevBookmarks) =>
+      prevBookmarks.map((bookmark) => {
+        // Only apply to filtered bookmarks
+        if (
+          filteredItems.some(
+            (filteredItem) =>
+              filteredItem.id === bookmark.id && filteredItem.isBookmark,
+          )
+        ) {
+          const updatedTags = [...(bookmark.tags || [])];
+          if (!updatedTags.includes(newTag.trim())) {
+            updatedTags.push(newTag.trim());
+          }
+          return { ...bookmark, tags: updatedTags };
+        }
+        return bookmark;
+      }),
+    );
+
     setNewTag("");
-    updateAllTagsList(tabs);
+    updateAllTagsList([...tabs, ...bookmarks]);
     saveTabsData();
+  };
+
+  const handleOpenAllFiltered = () => {
+    // Get all filtered tabs that are not already open
+    const filteredTabsToOpen = filteredItems.filter(
+      (item) =>
+        item.isBookmark ||
+        !tabs.some((tab) => tab.id === item.id && tab.active),
+    );
+
+    // Open each tab
+    filteredTabsToOpen.forEach((item) => {
+      browser.tabs.create({ url: item.url });
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedTabIds(filteredItems.map((item) => item.id));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedTabIds([]);
+  };
+
+  const handleToggleBookmarks = () => {
+    setShowBookmarks((prev) => !prev);
   };
 
   if (!isVisible) return null;
@@ -336,11 +520,13 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
       <Dialog open={true} onOpenChange={() => setEditingTab(null)}>
         <DialogContent className="edit-dialog">
           <DialogHeader>
-            <DialogTitle>Edit Tab</DialogTitle>
+            <DialogTitle>
+              Edit {editingTab.isBookmark ? "Bookmark" : "Tab"}
+            </DialogTitle>
           </DialogHeader>
           <div className="edit-form">
             <div className="form-group">
-              <Label htmlFor="tab-title">Tab Title</Label>
+              <Label htmlFor="tab-title">Title</Label>
               <Input
                 id="tab-title"
                 type="text"
@@ -433,6 +619,27 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               autoFocus
             />
           </div>
+          <div className="tabs-modal-actions">
+            <Button variant="outline" size="sm" onClick={handleToggleBookmarks}>
+              {showBookmarks ? "Hide Bookmarks" : "Show Bookmarks"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={
+                selectedTabIds.length > 0 ? handleDeselectAll : handleSelectAll
+              }
+            >
+              {selectedTabIds.length > 0 ? "Deselect All" : "Select All"}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenAllFiltered}
+            >
+              Open All ({filteredItems.length})
+            </Button>
+          </div>
           <div className="all-tags-container">
             {allTags.map((tag) => (
               <span
@@ -447,9 +654,9 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
         </DialogHeader>
         <div className="tabs-modal-content">
           <TabsList
-            tabs={filteredTabs}
+            tabs={filteredItems}
             onTabClick={handleTabClick}
-            selectedTabId={selectedTabId}
+            selectedTabIds={selectedTabIds}
             onRemoveTag={handleRemoveTag}
             onEditTab={handleEditTab}
           />
@@ -463,7 +670,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  if (selectedTabId) {
+                  if (selectedTabIds.length > 0) {
                     handleAddTag();
                   } else {
                     handleApplyTagToAll();
@@ -471,11 +678,13 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
                 }
               }}
             />
-            {selectedTabId ? (
-              <Button onClick={handleAddTag}>Add Tag to Selected</Button>
+            {selectedTabIds.length > 0 ? (
+              <Button onClick={handleAddTag}>
+                Add Tag to Selected ({selectedTabIds.length})
+              </Button>
             ) : (
               <Button onClick={handleApplyTagToAll}>
-                Add Tag to All Filtered
+                Add Tag to All Filtered ({filteredItems.length})
               </Button>
             )}
           </div>
