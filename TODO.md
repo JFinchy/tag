@@ -1,4 +1,6 @@
 - husky
 - github actions
+- look through content script of workona. It should have everything needed for deleting, updating, switching tabs
 - playwrite
 - Determine how to open a new tab and pass it extension info
+- Enter a tag and see all options filter out

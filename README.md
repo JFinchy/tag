@@ -75,7 +75,9 @@ Ideas
 - Set rules for certain domains
 - Suspend tabs
 - Have UI like Arc/Notion
-- Auto suggest new sites
+- Auto suggest new sites like stumble upon
+- Auto suggest tags
+- 
 - Do something cool with reading list? Set deadlines? Auto tag?
 - Show memory of each tab
 - Seperate by different user archetypes 
