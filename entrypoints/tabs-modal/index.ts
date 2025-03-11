@@ -3,7 +3,7 @@ import "uno.css";
 
 import App from "./App";
 import React from "react";
-import ReactDOM from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { createShadowRootUi } from "wxt/client";
 
 // WXT provides defineContentScript globally
@@ -22,8 +22,8 @@ export default defineContentScript({
         const wrapper = document.createElement("div");
         container.append(wrapper);
 
-        const root = ReactDOM.createRoot(wrapper);
-        root.render(React.createElement(App));
+        const root = createRoot(wrapper);
+        root.render(React.createElement(App, { initialTabs: [] }));
         return { root, wrapper };
       },
       onRemove: (elements) => {
@@ -38,7 +38,7 @@ export default defineContentScript({
     document.addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        // The modal visibility is handled within the React component
+        // The App component handles visibility internally
       }
     });
   },

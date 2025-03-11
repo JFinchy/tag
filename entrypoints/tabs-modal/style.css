@@ -23,6 +23,8 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  color: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .tabs-modal-header {
@@ -33,7 +35,8 @@
 .tabs-modal-header h2 {
   margin: 0;
   font-size: 18px;
-  color: #333;
+  color: #000;
+  font-weight: 600;
 }
 
 .tabs-modal-search {
@@ -43,6 +46,7 @@
   border-radius: 4px;
   font-size: 16px;
   margin-bottom: 8px;
+  color: #000;
 }
 
 .all-tags-container {
@@ -50,6 +54,13 @@
   flex-wrap: wrap;
   gap: 4px;
   margin-top: 8px;
+  align-items: center;
+}
+
+.all-tags-container label {
+  font-weight: 500;
+  color: #000;
+  margin-right: 8px;
 }
 
 .tabs-modal-content {
@@ -80,6 +91,7 @@
   border-radius: 4px;
   cursor: pointer;
   border: 1px solid #eee;
+  color: #000;
 }
 
 .tab-item:hover {
@@ -113,6 +125,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #000;
 }
 
 .tab-item-actions {
@@ -149,6 +162,7 @@
   border-radius: 4px;
   margin-right: 4px;
   font-size: 12px;
+  color: #333;
 }
 
 .tag.clickable {
@@ -180,6 +194,7 @@
   border-radius: 4px;
   margin-right: 4px;
   font-size: 12px;
+  color: #333;
 }
 
 /* Edit form */
@@ -187,6 +202,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  color: #000;
 }
 
 .form-group {
@@ -197,7 +213,7 @@
 
 .form-group label {
   font-weight: 500;
-  color: #333;
+  color: #000;
 }
 
 .form-input {
@@ -205,6 +221,7 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  color: #000;
 }
 
 .url-display {
@@ -213,6 +230,7 @@
   border-radius: 4px;
   font-size: 14px;
   word-break: break-all;
+  color: #000;
 }
 
 .tags-container {
@@ -226,6 +244,12 @@
   border-radius: 4px;
 }
 
+.tags-container p {
+  color: #666;
+  margin: 4px;
+  font-style: italic;
+}
+
 .tag-input-container {
   display: flex;
   gap: 8px;
@@ -237,6 +261,7 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  color: #000;
 }
 
 .add-tag-button, .edit-tab-button, .save-button, .cancel-button {
@@ -246,6 +271,7 @@
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.2s;
+  color: #fff;
 }
 
 .add-tag-button, .save-button {
@@ -275,4 +301,43 @@
 
 .cancel-button:hover {
   background-color: #e0e0e0;
+}
+
+/* Dialog customizations */
+.tabs-dialog {
+  width: 600px;
+  max-width: 90vw;
+  max-height: 80vh;
+}
+
+.edit-dialog {
+  width: 500px;
+  max-width: 90vw;
+}
+
+.search-container {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* Override some dialog styles */
+.dialog-content {
+  background-color: #fff;
+  color: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.dialog-title {
+  color: #000;
+}
+
+.dialog-header {
+  margin-bottom: 16px;
+}
+
+.dialog-footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 } 

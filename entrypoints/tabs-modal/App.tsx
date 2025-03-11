@@ -1,6 +1,17 @@
 import "./style.css";
+import "./components/ui/ui.css";
 
-import { Tab, AppProps } from "./types";
+import { AppProps, Tab } from "./types";
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+} from "./components/ui";
 import React, { useEffect, useState } from "react";
 
 import TabsList from "./components/TabsList";
@@ -89,7 +100,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     tabsArray.forEach((tab) => {
       tab.tags?.forEach((tag) => tagsSet.add(tag));
     });
-    setAllTags(Array.from(tagsSet));
+    setAllTags(Array.from(tagsSet).sort());
   };
 
   const fetchTabs = async () => {
@@ -131,20 +142,46 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   };
 
   const handleAddTag = () => {
-    if (!newTag.trim() || !selectedTabId) return;
+    if (!newTag.trim()) return;
 
-    setTabs((prevTabs) =>
-      prevTabs.map((tab) => {
-        if (tab.id === selectedTabId) {
-          const updatedTags = [...(tab.tags || [])];
-          if (!updatedTags.includes(newTag.trim())) {
-            updatedTags.push(newTag.trim());
-          }
-          return { ...tab, tags: updatedTags };
+    // If we're in edit mode, add tag to the editing tab
+    if (editingTab) {
+      setEditingTab((prevTab) => {
+        if (!prevTab) return null;
+
+        const updatedTags = [...(prevTab.tags || [])];
+        if (!updatedTags.includes(newTag.trim())) {
+          updatedTags.push(newTag.trim());
         }
-        return tab;
-      }),
-    );
+
+        // Update the tabs state as well
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) => {
+            if (tab.id === prevTab.id) {
+              return { ...tab, tags: updatedTags };
+            }
+            return tab;
+          }),
+        );
+
+        return { ...prevTab, tags: updatedTags };
+      });
+    }
+    // Otherwise add tag to the selected tab
+    else if (selectedTabId) {
+      setTabs((prevTabs) =>
+        prevTabs.map((tab) => {
+          if (tab.id === selectedTabId) {
+            const updatedTags = [...(tab.tags || [])];
+            if (!updatedTags.includes(newTag.trim())) {
+              updatedTags.push(newTag.trim());
+            }
+            return { ...tab, tags: updatedTags };
+          }
+          return tab;
+        }),
+      );
+    }
 
     setNewTag("");
     updateAllTagsList(tabs);
@@ -165,6 +202,17 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
         return tab;
       }),
     );
+
+    // If we're in edit mode, update the editing tab state as well
+    if (editingTab && editingTab.id === tabId) {
+      setEditingTab((prevTab) => {
+        if (!prevTab) return null;
+        return {
+          ...prevTab,
+          tags: (prevTab.tags || []).filter((tag) => tag !== tagToRemove),
+        };
+      });
+    }
 
     // Save tags to storage
     saveTabsData();
@@ -258,103 +306,133 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     setSearchQuery(tag);
   };
 
+  const handleApplyTagToAll = () => {
+    if (!newTag.trim() || filteredTabs.length === 0) return;
+
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) => {
+        // Only apply to filtered tabs
+        if (filteredTabs.some((filteredTab) => filteredTab.id === tab.id)) {
+          const updatedTags = [...(tab.tags || [])];
+          if (!updatedTags.includes(newTag.trim())) {
+            updatedTags.push(newTag.trim());
+          }
+          return { ...tab, tags: updatedTags };
+        }
+        return tab;
+      }),
+    );
+
+    setNewTag("");
+    updateAllTagsList(tabs);
+    saveTabsData();
+  };
+
   if (!isVisible) return null;
 
   // Render edit mode
   if (editingTab) {
     return (
-      <div className="tabs-modal-overlay" onClick={() => setEditingTab(null)}>
-        <div className="tabs-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="tabs-modal-header">
-            <h2>Edit Tab</h2>
-          </div>
-          <div className="tabs-modal-content">
-            <div className="edit-form">
-              <div className="form-group">
-                <label htmlFor="tab-title">Tab Title</label>
-                <input
-                  id="tab-title"
+      <Dialog open={true} onOpenChange={() => setEditingTab(null)}>
+        <DialogContent className="edit-dialog">
+          <DialogHeader>
+            <DialogTitle>Edit Tab</DialogTitle>
+          </DialogHeader>
+          <div className="edit-form">
+            <div className="form-group">
+              <Label htmlFor="tab-title">Tab Title</Label>
+              <Input
+                id="tab-title"
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <Label>URL</Label>
+              <div className="url-display">{editingTab.url}</div>
+            </div>
+
+            <div className="form-group">
+              <Label>Tags</Label>
+              <div className="tags-container">
+                {editingTab.tags && editingTab.tags.length > 0 ? (
+                  editingTab.tags.map((tag) => (
+                    <span key={tag} className="tag">
+                      {tag}
+                      <button
+                        className="remove-tag-btn"
+                        onClick={() => handleRemoveTag(editingTab.id, tag)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                ) : (
+                  <p>No tags added yet</p>
+                )}
+              </div>
+
+              <div className="tag-input-container">
+                <Input
                   type="text"
-                  className="form-input"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
+                  placeholder="Add a tag..."
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddTag();
+                    }
+                  }}
                 />
+                <Button onClick={handleAddTag}>Add Tag</Button>
               </div>
 
-              <div className="form-group">
-                <label>URL</label>
-                <div className="url-display">{editingTab.url}</div>
-              </div>
-
-              <div className="form-group">
-                <label>Tags</label>
-                <div className="tags-container">
-                  {editingTab.tags && editingTab.tags.length > 0 ? (
-                    editingTab.tags.map((tag) => (
-                      <span key={tag} className="tag">
-                        {tag}
-                        <button
-                          className="remove-tag-btn"
-                          onClick={() => handleRemoveTag(editingTab.id, tag)}
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))
-                  ) : (
-                    <p>No tags added yet</p>
-                  )}
+              {allTags.length > 0 && (
+                <div className="all-tags-container">
+                  <Label>Quick add:</Label>
+                  {allTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="tag clickable"
+                      onClick={() => {
+                        setNewTag(tag);
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
-
-                <div className="tag-input-container">
-                  <input
-                    type="text"
-                    className="tag-input"
-                    placeholder="Add a tag..."
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleAddTag();
-                      }
-                    }}
-                  />
-                  <button className="add-tag-button" onClick={handleAddTag}>
-                    Add Tag
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
-          <div className="tabs-modal-footer">
-            <button
-              className="cancel-button"
-              onClick={() => setEditingTab(null)}
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTab(null)}>
               Cancel
-            </button>
-            <button className="save-button" onClick={handleSaveEdit}>
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   // Render normal mode
   return (
-    <div className="tabs-modal-overlay" onClick={() => setIsVisible(false)}>
-      <div className="tabs-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="tabs-modal-header">
-          <input
-            type="text"
-            className="tabs-modal-search"
-            placeholder="Search by title/tags..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
+    <Dialog open={true} onOpenChange={() => setIsVisible(false)}>
+      <DialogContent className="tabs-dialog">
+        <DialogHeader>
+          <div className="search-container">
+            <Input
+              type="text"
+              className="tabs-modal-search"
+              placeholder="Search by title/tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
           <div className="all-tags-container">
             {allTags.map((tag) => (
               <span
@@ -366,7 +444,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               </span>
             ))}
           </div>
-        </div>
+        </DialogHeader>
         <div className="tabs-modal-content">
           <TabsList
             tabs={filteredTabs}
@@ -376,29 +454,34 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             onEditTab={handleEditTab}
           />
         </div>
-        {selectedTabId && (
-          <div className="tabs-modal-footer">
-            <div className="tag-input-container">
-              <input
-                type="text"
-                className="tag-input"
-                placeholder="Add a tag..."
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+        <DialogFooter>
+          <div className="tag-input-container">
+            <Input
+              type="text"
+              placeholder="Add a tag to selected or filtered tabs..."
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (selectedTabId) {
                     handleAddTag();
+                  } else {
+                    handleApplyTagToAll();
                   }
-                }}
-              />
-              <button className="add-tag-button" onClick={handleAddTag}>
-                Add Tag
-              </button>
-            </div>
+                }
+              }}
+            />
+            {selectedTabId ? (
+              <Button onClick={handleAddTag}>Add Tag to Selected</Button>
+            ) : (
+              <Button onClick={handleApplyTagToAll}>
+                Add Tag to All Filtered
+              </Button>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
