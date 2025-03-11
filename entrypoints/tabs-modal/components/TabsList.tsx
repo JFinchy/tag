@@ -7,6 +7,7 @@ const TabsList: React.FC<TabsListProps> = ({
   selectedTabIds = [],
   onRemoveTag,
   onEditTab,
+  focusedTabIndex = -1,
 }) => {
   if (tabs.length === 0) {
     return <div>No tabs or bookmarks found</div>;
@@ -14,14 +15,15 @@ const TabsList: React.FC<TabsListProps> = ({
 
   return (
     <div className="tabs-list">
-      {tabs.map((tab) => {
+      {tabs.map((tab, index) => {
         const isSelected = selectedTabIds.includes(tab.id);
+        const isFocused = index === focusedTabIndex;
         const displayTitle = tab.customTitle || tab.title;
 
         return (
           <div
             key={tab.id}
-            className={`tab-item ${tab.active ? "tab-item-active" : ""} ${isSelected ? "tab-item-selected" : ""} ${tab.isBookmark ? "tab-item-bookmark" : ""}`}
+            className={`tab-item ${tab.active ? "tab-item-active" : ""} ${isSelected ? "tab-item-selected" : ""} ${tab.isBookmark ? "tab-item-bookmark" : ""} ${isFocused ? "tab-item-focused" : ""}`}
             onClick={() => onTabClick(tab.id)}
           >
             <div className="tab-item-content">
@@ -52,6 +54,10 @@ const TabsList: React.FC<TabsListProps> = ({
                 )}
               </div>
             </div>
+
+            {tab.description && (
+              <div className="tab-item-description">{tab.description}</div>
+            )}
 
             <div className="tab-item-meta">
               {tab.active && !tab.isBookmark && (

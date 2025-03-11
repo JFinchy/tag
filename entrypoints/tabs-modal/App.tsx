@@ -12,7 +12,11 @@ import {
   Input,
   Label,
 } from "./components/ui";
-import React, { useEffect, useState } from "react";
+import React, {
+  KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useState,
+} from "react";
 
 import TabsList from "./components/TabsList";
 
@@ -43,16 +47,21 @@ declare namespace browser {
   }
 
   namespace runtime {
-    function sendMessage(message: any): Promise<any>;
+    function sendMessage(message: Record<string, unknown>): Promise<unknown>;
   }
 
   namespace storage {
     interface StorageArea {
-      get(keys: string | string[] | null): Promise<{ [key: string]: any }>;
-      set(items: { [key: string]: any }): Promise<void>;
+      get(keys: string | string[] | null): Promise<Record<string, unknown>>;
+      set(items: Record<string, unknown>): Promise<void>;
     }
     const local: StorageArea;
   }
+}
+
+interface TagFilter {
+  tag: string;
+  exclude: boolean;
 }
 
 const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
@@ -65,7 +74,34 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [editingTab, setEditingTab] = useState<Tab | null>(null);
   const [editedTitle, setEditedTitle] = useState("");
+  const [editedDescription, setEditedDescription] = useState("");
   const [showBookmarks, setShowBookmarks] = useState(true);
+  const [tagFilters, setTagFilters] = useState<TagFilter[]>([]);
+  const [focusedTabIndex, setFocusedTabIndex] = useState<number>(-1);
+
+  const allItems = [...tabs, ...(showBookmarks ? bookmarks : [])];
+
+  const filteredItems = allItems.filter((item) => {
+    const query = searchQuery.toLowerCase();
+    const title = item.customTitle || item.title;
+    const description = item.description || "";
+
+    // Check if the item matches the search query
+    const matchesQuery =
+      title.toLowerCase().includes(query) ||
+      item.url.toLowerCase().includes(query) ||
+      description.toLowerCase().includes(query) ||
+      item.tags?.some((tag) => tag.toLowerCase().includes(query)) ||
+      item.labels?.some((label) => label.toLowerCase().includes(query));
+
+    // Check if the item matches all tag filters
+    const matchesTagFilters = tagFilters.every((filter) => {
+      const hasTag = item.tags?.includes(filter.tag) || false;
+      return filter.exclude ? !hasTag : hasTag;
+    });
+
+    return matchesQuery && matchesTagFilters;
+  });
 
   useEffect(() => {
     // Add keyboard shortcut listener
@@ -85,6 +121,47 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
           setIsVisible(false);
         }
       }
+
+      // Handle arrow key navigation when modal is visible and not in edit mode
+      if (isVisible && !editingTab) {
+        switch (e.key) {
+          case "ArrowDown":
+            e.preventDefault();
+            if (filteredItems.length > 0) {
+              setFocusedTabIndex((prev) => {
+                const newIndex = prev < filteredItems.length - 1 ? prev + 1 : 0;
+                return newIndex;
+              });
+            }
+            break;
+          case "ArrowUp":
+            e.preventDefault();
+            if (filteredItems.length > 0) {
+              setFocusedTabIndex((prev) => {
+                const newIndex = prev > 0 ? prev - 1 : filteredItems.length - 1;
+                return newIndex;
+              });
+            }
+            break;
+          case "ArrowRight":
+            // Navigate to next page or section if implemented
+            break;
+          case "ArrowLeft":
+            // Navigate to previous page or section if implemented
+            break;
+          case "Enter":
+            // Select the focused tab
+            if (
+              focusedTabIndex >= 0 &&
+              focusedTabIndex < filteredItems.length
+            ) {
+              handleTabClick(filteredItems[focusedTabIndex].id);
+            }
+            break;
+          default:
+            break;
+        }
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -92,7 +169,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isVisible, editingTab]);
+  }, [isVisible, editingTab, filteredItems, focusedTabIndex]);
 
   // Listen for tab updates from the content script
   useEffect(() => {
@@ -104,6 +181,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
           ...newTab,
           tags: existingTab?.tags || [],
           customTitle: existingTab?.customTitle,
+          description: existingTab?.description,
         };
       });
       setTabs(updatedTabs);
@@ -151,12 +229,14 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
   const fetchTabs = async () => {
     try {
-      const allTabs = await browser.runtime.sendMessage({ action: "getTabs" });
-      const tabsWithTags = allTabs.map((tab: Tab) => ({
+      const response = await browser.runtime.sendMessage({ action: "getTabs" });
+      const allTabs = response as Tab[];
+      const tabsWithTags = allTabs.map((tab) => ({
         ...tab,
         tags: [],
         labels: [],
         customTitle: null,
+        description: null,
         isBookmark: false,
       }));
       setTabs(tabsWithTags);
@@ -185,6 +265,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               tags: [],
               labels: [],
               customTitle: null,
+              description: null,
               isBookmark: true,
             });
           }
@@ -201,19 +282,6 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
       console.error("Error fetching bookmarks:", error);
     }
   };
-
-  const allItems = [...tabs, ...(showBookmarks ? bookmarks : [])];
-
-  const filteredItems = allItems.filter((item) => {
-    const query = searchQuery.toLowerCase();
-    const title = item.customTitle || item.title;
-    return (
-      title.toLowerCase().includes(query) ||
-      item.url.toLowerCase().includes(query) ||
-      item.tags?.some((tag) => tag.toLowerCase().includes(query)) ||
-      item.labels?.some((label) => label.toLowerCase().includes(query))
-    );
-  });
 
   const handleTabClick = (tabId: number) => {
     // If we're in edit mode, don't do anything
@@ -326,6 +394,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   const handleEditTab = (tab: Tab) => {
     setEditingTab(tab);
     setEditedTitle(tab.customTitle || tab.title);
+    setEditedDescription(tab.description || "");
   };
 
   const handleSaveEdit = () => {
@@ -338,6 +407,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             return {
               ...bookmark,
               customTitle: editedTitle.trim() || null,
+              description: editedDescription.trim() || null,
             };
           }
           return bookmark;
@@ -350,6 +420,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             return {
               ...tab,
               customTitle: editedTitle.trim() || null,
+              description: editedDescription.trim() || null,
             };
           }
           return tab;
@@ -374,6 +445,10 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
           if (item.customTitle) {
             data.customTitle = item.customTitle;
+          }
+
+          if (item.description) {
+            data.description = item.description;
           }
 
           if (Object.keys(data).length > 0) {
@@ -406,6 +481,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             ...tab,
             tags: (data.tags as string[]) || [],
             customTitle: (data.customTitle as string) || null,
+            description: (data.description as string) || null,
           };
         }),
       );
@@ -419,6 +495,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             ...bookmark,
             tags: (data.tags as string[]) || [],
             customTitle: (data.customTitle as string) || null,
+            description: (data.description as string) || null,
           };
         }),
       );
@@ -434,8 +511,34 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     }
   }, [initialTabs]);
 
-  const handleTagClick = (tag: string) => {
-    setSearchQuery(tag);
+  const handleTagClick = (tag: string, exclude = false) => {
+    // If the tag is already in the filters, remove it
+    if (tagFilters.some((filter) => filter.tag === tag)) {
+      setTagFilters(tagFilters.filter((filter) => filter.tag !== tag));
+    } else {
+      // Otherwise add it to the filters
+      setTagFilters([...tagFilters, { tag, exclude }]);
+    }
+  };
+
+  const handleSearchInputKeyDown = (
+    e: ReactKeyboardEvent<HTMLInputElement>,
+  ) => {
+    // If Tab key is pressed and there's text in the search box
+    if (e.key === "Tab" && searchQuery.trim()) {
+      e.preventDefault(); // Prevent default tab behavior
+
+      // Check if the search query matches any existing tag
+      const matchingTag = allTags.find((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase()),
+      );
+
+      if (matchingTag) {
+        // Add the tag to filters
+        handleTagClick(matchingTag);
+        setSearchQuery(""); // Clear the search query
+      }
+    }
   };
 
   const handleApplyTagToAll = () => {
@@ -486,18 +589,39 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     saveTabsData();
   };
 
-  const handleOpenAllFiltered = () => {
-    // Get all filtered tabs that are not already open
-    const filteredTabsToOpen = filteredItems.filter(
-      (item) =>
-        item.isBookmark ||
-        !tabs.some((tab) => tab.id === item.id && tab.active),
-    );
+  const isWxtDevUrl = (url: string): boolean => {
+    return url.startsWith("http://localhost:") && url.includes("chrome-mv3");
+  };
 
-    // Open each tab
-    filteredTabsToOpen.forEach((item) => {
-      browser.tabs.create({ url: item.url });
-    });
+  const handleOpenAllFiltered = async () => {
+    // Get all WXT development URLs first
+    const wxtDevUrls = filteredItems
+      .filter((item) => isWxtDevUrl(item.url))
+      .map((item) => item.url);
+
+    // Open each filtered item in a new tab
+    for (const item of filteredItems) {
+      try {
+        // Skip WXT dev URLs for now
+        if (!isWxtDevUrl(item.url)) {
+          await browser.tabs.create({ url: item.url });
+        }
+      } catch (error) {
+        console.error(`Error opening tab with URL ${item.url}:`, error);
+      }
+    }
+
+    // Now open WXT dev URLs last to ensure they're on top
+    for (const url of wxtDevUrls) {
+      try {
+        await browser.tabs.create({ url });
+      } catch (error) {
+        console.error(`Error opening WXT dev URL ${url}:`, error);
+      }
+    }
+
+    // Close the modal after opening all tabs
+    setIsVisible(false);
   };
 
   const handleSelectAll = () => {
@@ -510,6 +634,10 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
   const handleToggleBookmarks = () => {
     setShowBookmarks((prev) => !prev);
+  };
+
+  const handleRemoveTagFilter = (tag: string) => {
+    setTagFilters(tagFilters.filter((filter) => filter.tag !== tag));
   };
 
   if (!isVisible) return null;
@@ -532,6 +660,17 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
                 type="text"
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <Label htmlFor="tab-description">Description</Label>
+              <Input
+                id="tab-description"
+                type="text"
+                value={editedDescription}
+                onChange={(e) => setEditedDescription(e.target.value)}
+                placeholder="Add a description..."
               />
             </div>
 
@@ -613,12 +752,37 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             <Input
               type="text"
               className="tabs-modal-search"
-              placeholder="Search by title/tags..."
+              placeholder="Search by title/tags... (Press Tab to add as filter)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchInputKeyDown}
               autoFocus
             />
           </div>
+
+          {tagFilters.length > 0 && (
+            <div className="active-filters">
+              <Label>Active filters:</Label>
+              <div className="filter-tags">
+                {tagFilters.map((filter) => (
+                  <span
+                    key={filter.tag}
+                    className={`filter-tag ${filter.exclude ? "filter-tag-exclude" : ""}`}
+                  >
+                    {filter.exclude ? "!" : ""}
+                    {filter.tag}
+                    <button
+                      className="remove-tag-btn"
+                      onClick={() => handleRemoveTagFilter(filter.tag)}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="tabs-modal-actions">
             <Button variant="outline" size="sm" onClick={handleToggleBookmarks}>
               {showBookmarks ? "Hide Bookmarks" : "Show Bookmarks"}
@@ -640,15 +804,24 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               Open All ({filteredItems.length})
             </Button>
           </div>
+
           <div className="all-tags-container">
             {allTags.map((tag) => (
-              <span
-                key={tag}
-                className="tag clickable"
-                onClick={() => handleTagClick(tag)}
-              >
-                {tag}
-              </span>
+              <div key={tag} className="tag-with-actions">
+                <span
+                  className={`tag clickable ${tagFilters.some((f) => f.tag === tag) ? "tag-active" : ""}`}
+                  onClick={() => handleTagClick(tag)}
+                >
+                  {tag}
+                </span>
+                <button
+                  className="exclude-tag-btn"
+                  onClick={() => handleTagClick(tag, true)}
+                  title="Exclude this tag"
+                >
+                  !
+                </button>
+              </div>
             ))}
           </div>
         </DialogHeader>

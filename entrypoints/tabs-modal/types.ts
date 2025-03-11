@@ -8,6 +8,7 @@ export interface Tab {
   tags?: string[];
   labels?: string[];
   customTitle?: string | null;
+  description?: string | null;
   isBookmark?: boolean;
 }
 
@@ -23,4 +24,5 @@ export interface TabsListProps {
   selectedTabIds?: number[];
   onRemoveTag?: (tabId: number, tag: string) => void;
   onEditTab?: (tab: Tab) => void;
+  focusedTabIndex?: number;
 }

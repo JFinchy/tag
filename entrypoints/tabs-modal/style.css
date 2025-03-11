@@ -17,8 +17,8 @@
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 600px;
-  max-width: 90vw;
+  width: 90vw;
+  max-width: 1400px;
   max-height: 80vh;
   overflow: hidden;
   display: flex;
@@ -70,6 +70,61 @@
   margin-right: 8px;
 }
 
+.active-filters {
+  margin: 8px 0;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background-color: #e6f7ff;
+  border-radius: 4px;
+  margin-right: 4px;
+  font-size: 12px;
+  color: #0066cc;
+  border: 1px solid #91d5ff;
+}
+
+.filter-tag-exclude {
+  background-color: #fff1f0;
+  color: #ff4d4f;
+  border-color: #ffa39e;
+}
+
+.tag-with-actions {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 4px;
+}
+
+.exclude-tag-btn {
+  background: #f0f0f0;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 10px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+}
+
+.exclude-tag-btn:hover {
+  background-color: #ff4d4f;
+  color: white;
+}
+
 .tabs-modal-content {
   padding: 16px;
   overflow-y: auto;
@@ -86,9 +141,22 @@
 
 /* Tab items */
 .tabs-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 8px;
+}
+
+/* Responsive grid layout */
+@media (min-width: 768px) {
+  .tabs-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .tabs-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .tab-item {
@@ -99,6 +167,7 @@
   cursor: pointer;
   border: 1px solid #eee;
   color: #000;
+  height: 100%;
 }
 
 .tab-item:hover {
@@ -111,12 +180,19 @@
 }
 
 .tab-item-selected {
-  border: 1px solid #0066cc;
-  background-color: #f0f7ff;
+  background-color: rgba(0, 120, 212, 0.1);
+  border: 1px solid rgba(0, 120, 212, 0.3);
+}
+
+.tab-item-focused {
+  outline: 2px solid #0078d4;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .tab-item-bookmark {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid #f5a623;
 }
 
 .tab-item-content {
@@ -192,6 +268,12 @@
 
 .tag.clickable:hover {
   background-color: #ddd;
+}
+
+.tag-active {
+  background-color: #e6f7ff;
+  color: #0066cc;
+  border: 1px solid #91d5ff;
 }
 
 .remove-tag-btn {
@@ -326,13 +408,13 @@
 
 /* Dialog customizations */
 .tabs-dialog {
-  width: 600px;
-  max-width: 90vw;
-  max-height: 80vh;
+  width: 90vw;
+  max-width: 1200px;
+  max-height: 90vh;
 }
 
 .edit-dialog {
-  width: 500px;
+  width: 600px;
   max-width: 90vw;
 }
 
@@ -361,4 +443,17 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Tab item description */
+.tab-item-description {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 } 

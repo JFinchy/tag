@@ -77,13 +77,19 @@ Ideas
 - Have UI like Arc/Notion
 - Auto suggest new sites like stumble upon
 - Auto suggest tags
-- 
 - Do something cool with reading list? Set deadlines? Auto tag?
 - Show memory of each tab
-- Seperate by different user archetypes 
+- Separate by different user archetypes 
 - Cmd k for search
+  - Is there an option of doing this with another one? 
 - Notion like table with tags
 - Override history/bookmarks page
+  - What would I want this too look like
 - Open Workona site
 - Drag and drop
+- Don't allow the same tab to exist twice
+- Place same domains next to eachother
+  - Be careful to not make this jarring
+- Shorty click through to bookmark links. A way to allow users to have the same bookmark multiple times
+  - tag-manager.com/3r2lfdsdf3fds/?target=espn.com (with espn description and icon)
 - https://feature-sliced.design/ and https://github.com/moneyflow-dev/moneyflow/blob/main/src/app/app.tsx
