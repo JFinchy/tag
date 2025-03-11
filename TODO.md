@@ -1,0 +1,4 @@
+- husky
+- github actions
+- playwrite
+- Determine how to open a new tab and pass it extension info

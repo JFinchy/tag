@@ -1,0 +1,1 @@
+export { useGlobalQuery } from './use-global';

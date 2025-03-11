@@ -1,0 +1,16 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "module": "esnext",
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/hooks": ["./src/app/hooks/*"],
+      "@/store": ["./src/app/store/*"],
+      "@/queries": ["./src/app/queries/*"],
+      "@/pages": ["./src/pages/*"],
+  },
+  }
+}
