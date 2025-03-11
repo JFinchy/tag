@@ -646,48 +646,59 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   if (editingTab) {
     return (
       <Dialog open={true} onOpenChange={() => setEditingTab(null)}>
-        <DialogContent className="edit-dialog">
+        <DialogContent className="w-full max-w-2xl p-6">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
               Edit {editingTab.isBookmark ? "Bookmark" : "Tab"}
             </DialogTitle>
           </DialogHeader>
-          <div className="edit-form">
-            <div className="form-group">
-              <Label htmlFor="tab-title">Title</Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tab-title" className="font-medium">
+                Title
+              </Label>
               <Input
                 id="tab-title"
                 type="text"
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
+                className="w-full"
               />
             </div>
 
-            <div className="form-group">
-              <Label htmlFor="tab-description">Description</Label>
+            <div className="space-y-2">
+              <Label htmlFor="tab-description" className="font-medium">
+                Description
+              </Label>
               <Input
                 id="tab-description"
                 type="text"
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
                 placeholder="Add a description..."
+                className="w-full"
               />
             </div>
 
-            <div className="form-group">
-              <Label>URL</Label>
-              <div className="url-display">{editingTab.url}</div>
+            <div className="space-y-2">
+              <Label className="font-medium">URL</Label>
+              <div className="p-2 bg-gray-50 rounded text-gray-600 break-all">
+                {editingTab.url}
+              </div>
             </div>
 
-            <div className="form-group">
-              <Label>Tags</Label>
-              <div className="tags-container">
+            <div className="space-y-2">
+              <Label className="font-medium">Tags</Label>
+              <div className="flex flex-wrap gap-1">
                 {editingTab.tags && editingTab.tags.length > 0 ? (
                   editingTab.tags.map((tag) => (
-                    <span key={tag} className="tag">
+                    <span
+                      key={tag}
+                      className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200"
+                    >
                       {tag}
                       <button
-                        className="remove-tag-btn"
+                        className="ml-1 hover:text-red-500"
                         onClick={() => handleRemoveTag(editingTab.id, tag)}
                       >
                         ×
@@ -695,11 +706,11 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
                     </span>
                   ))
                 ) : (
-                  <p>No tags added yet</p>
+                  <p className="text-gray-500 text-sm">No tags added yet</p>
                 )}
               </div>
 
-              <div className="tag-input-container">
+              <div className="flex gap-2">
                 <Input
                   type="text"
                   placeholder="Add a tag..."
@@ -710,30 +721,37 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
                       handleAddTag();
                     }
                   }}
+                  className="flex-1"
                 />
                 <Button onClick={handleAddTag}>Add Tag</Button>
               </div>
 
               {allTags.length > 0 && (
-                <div className="all-tags-container">
-                  <Label>Quick add:</Label>
-                  {allTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="tag clickable"
-                      onClick={() => {
-                        setNewTag(tag);
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                <div className="mt-2">
+                  <Label className="font-medium">Quick add:</Label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {allTags.map((tag) => (
+                      <button
+                        key={tag}
+                        className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs"
+                        onClick={() => {
+                          setNewTag(tag);
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingTab(null)}>
+          <DialogFooter className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setEditingTab(null)}
+              className="bg-white hover:bg-gray-50"
+            >
               Cancel
             </Button>
             <Button onClick={handleSaveEdit}>Save Changes</Button>
@@ -746,12 +764,12 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   // Render normal mode
   return (
     <Dialog open={true} onOpenChange={() => setIsVisible(false)}>
-      <DialogContent className="tabs-dialog">
-        <DialogHeader>
-          <div className="search-container">
+      <DialogContent className="w-[90vw] max-w-7xl">
+        <DialogHeader className="space-y-4">
+          <div className="space-y-2">
             <Input
               type="text"
-              className="tabs-modal-search"
+              className="w-full"
               placeholder="Search by title/tags... (Press Tab to add as filter)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -761,18 +779,25 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
           </div>
 
           {tagFilters.length > 0 && (
-            <div className="active-filters">
-              <Label>Active filters:</Label>
-              <div className="filter-tags">
+            <div className="space-y-2">
+              <Label className="font-medium">Active filters:</Label>
+              <div className="flex flex-wrap gap-1">
                 {tagFilters.map((filter) => (
                   <span
                     key={filter.tag}
-                    className={`filter-tag ${filter.exclude ? "filter-tag-exclude" : ""}`}
+                    className={`
+                      inline-flex items-center px-2 py-0.5 rounded text-xs border
+                      ${
+                        filter.exclude
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-blue-50 text-blue-700 border-blue-200"
+                      }
+                    `}
                   >
                     {filter.exclude ? "!" : ""}
                     {filter.tag}
                     <button
-                      className="remove-tag-btn"
+                      className="ml-1 hover:text-red-500"
                       onClick={() => handleRemoveTagFilter(filter.tag)}
                     >
                       ×
@@ -783,8 +808,13 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             </div>
           )}
 
-          <div className="tabs-modal-actions">
-            <Button variant="outline" size="sm" onClick={handleToggleBookmarks}>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleBookmarks}
+              className="bg-white hover:bg-gray-50"
+            >
               {showBookmarks ? "Hide Bookmarks" : "Show Bookmarks"}
             </Button>
             <Button
@@ -793,6 +823,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               onClick={
                 selectedTabIds.length > 0 ? handleDeselectAll : handleSelectAll
               }
+              className="bg-white hover:bg-gray-50"
             >
               {selectedTabIds.length > 0 ? "Deselect All" : "Select All"}
             </Button>
@@ -800,22 +831,30 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
               variant="secondary"
               size="sm"
               onClick={handleOpenAllFiltered}
+              className="bg-gray-100 hover:bg-gray-200"
             >
               Open All ({filteredItems.length})
             </Button>
           </div>
 
-          <div className="all-tags-container">
+          <div className="flex flex-wrap gap-1 items-center">
             {allTags.map((tag) => (
-              <div key={tag} className="tag-with-actions">
-                <span
-                  className={`tag clickable ${tagFilters.some((f) => f.tag === tag) ? "tag-active" : ""}`}
+              <div key={tag} className="inline-flex items-center">
+                <button
+                  className={`
+                    px-2 py-0.5 rounded text-xs
+                    ${
+                      tagFilters.some((f) => f.tag === tag)
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    }
+                  `}
                   onClick={() => handleTagClick(tag)}
                 >
                   {tag}
-                </span>
+                </button>
                 <button
-                  className="exclude-tag-btn"
+                  className="w-4 h-4 ml-0.5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-red-500 hover:text-white text-[10px]"
                   onClick={() => handleTagClick(tag, true)}
                   title="Exclude this tag"
                 >
@@ -825,7 +864,8 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             ))}
           </div>
         </DialogHeader>
-        <div className="tabs-modal-content">
+
+        <div className="overflow-y-auto max-h-[60vh] p-4">
           <TabsList
             tabs={filteredItems}
             onTabClick={handleTabClick}
@@ -834,8 +874,9 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
             onEditTab={handleEditTab}
           />
         </div>
-        <DialogFooter>
-          <div className="tag-input-container">
+
+        <DialogFooter className="p-4 border-t border-gray-200">
+          <div className="flex gap-2 w-full">
             <Input
               type="text"
               placeholder="Add a tag to selected or filtered tabs..."
@@ -850,6 +891,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
                   }
                 }
               }}
+              className="flex-1"
             />
             {selectedTabIds.length > 0 ? (
               <Button onClick={handleAddTag}>
