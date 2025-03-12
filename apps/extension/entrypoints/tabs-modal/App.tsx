@@ -295,7 +295,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
 
     return (
       <div className="absolute top-0 right-0 p-1">
-        <span className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium border border-red-200">
+        <span className="inline-flex items-center px-2 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
           High Memory Usage
         </span>
       </div>
@@ -1382,15 +1382,15 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
   if (editingTab) {
     return (
       <Dialog open={true} onOpenChange={() => setEditingTab(null)}>
-        <DialogContent className="w-full p-6">
+        <DialogContent className="w-full p-6 dark:bg-gray-900 dark:text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-xl font-semibold dark:text-white">
               Edit {editingTab.isBookmark ? "Bookmark" : "Tab"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="tab-title" className="font-medium">
+              <Label htmlFor="tab-title" className="font-medium dark:text-white">
                 Title
               </Label>
               <Input
@@ -1398,12 +1398,12 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                 type="text"
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full"
+                className="w-full dark:bg-gray-800 dark:text-white dark:border-gray-700"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tab-description" className="font-medium">
+              <Label htmlFor="tab-description" className="font-medium dark:text-white">
                 Description
               </Label>
               <Input
@@ -1412,23 +1412,23 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
                 placeholder="Add a description..."
-                className="w-full"
+                className="w-full dark:bg-gray-800 dark:text-white dark:border-gray-700"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="font-medium">URL</Label>
-              <div className="p-2 bg-gray-50 rounded text-gray-600 break-all">
+              <Label className="font-medium dark:text-white">URL</Label>
+              <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-300 break-all">
                 {editingTab.url}
               </div>
             </div>
 
             {!editingTab.isBookmark && (
-              <div className="space-y-2 pt-4 border-t">
-                <Label className="font-medium">
+              <div className="space-y-2 pt-4 border-t dark:border-gray-700">
+                <Label className="font-medium dark:text-white">
                   Suspension Settings for {getDomain(editingTab.url)}
                 </Label>
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   {/* Domain Rule */}
                   <div className="flex items-center gap-4">
                     <select
@@ -1439,13 +1439,13 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                           e.target.value as "never" | "faster" | "normal",
                         )
                       }
-                      className="px-2 py-1 rounded border"
+                      className="px-2 py-1 rounded border dark:bg-gray-700 dark:text-white dark:border-gray-600"
                     >
                       <option value="never">Never Suspend</option>
                       <option value="faster">Suspend Faster</option>
                       <option value="normal">Normal Suspension</option>
                     </select>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {getDomainRule(editingTab.url)?.action === "never" &&
                         "This domain will never be suspended"}
                       {getDomainRule(editingTab.url)?.action === "faster" &&
@@ -1460,7 +1460,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
 
                   {/* Memory Usage Info */}
                   {editingTab.memoryUsage && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
                       {editingTab.memoryUsage.privateMemory && (
                         <p>
                           Current Memory Usage:{" "}
@@ -1480,7 +1480,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                       {editingTab.memoryUsage.privateMemory &&
                         editingTab.memoryUsage.privateMemory >=
                           suspensionSettings.memoryThreshold && (
-                          <p className="text-amber-600">
+                          <p className="text-amber-600 dark:text-amber-500">
                             ⚠️ Above memory threshold (
                             {formatMemorySize(
                               suspensionSettings.memoryThreshold,
@@ -1495,12 +1495,12 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                   <div className="flex items-center justify-between">
                     <span className="text-sm">
                       {editingTab.suspended ? (
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 dark:text-gray-300">
                           Suspended{" "}
                           {getTimeSince(editingTab.lastSuspendedTimestamp)}
                         </span>
                       ) : (
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 dark:text-gray-300">
                           Last active{" "}
                           {getTimeSince(editingTab.lastActiveTimestamp)}
                         </span>
@@ -1516,6 +1516,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                           suspendTab(editingTab);
                         }
                       }}
+                      className="dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
                     >
                       {editingTab.suspended ? "Restore Tab" : "Suspend Now"}
                     </Button>
@@ -1525,17 +1526,17 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
             )}
 
             <div className="space-y-2">
-              <Label className="font-medium">Tags</Label>
+              <Label className="font-medium dark:text-white">Tags</Label>
               <div className="flex flex-wrap gap-1">
                 {editingTab.tags && editingTab.tags.length > 0 ? (
                   editingTab.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200"
+                      className="inline-flex items-center px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs border border-blue-200 dark:border-blue-800"
                     >
                       {tag}
                       <button
-                        className="ml-1 hover:text-red-500"
+                        className="ml-1 hover:text-red-500 dark:hover:text-red-400"
                         onClick={() => handleRemoveTag(editingTab.id, tag)}
                       >
                         ×
@@ -1543,7 +1544,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                     </span>
                   ))
                 ) : (
-                  <p className="text-gray-500 text-sm">No tags added yet</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No tags added yet</p>
                 )}
               </div>
 
@@ -1558,19 +1559,24 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                       handleAddTag();
                     }
                   }}
-                  className="flex-1"
+                  className="flex-1 dark:bg-gray-800 dark:text-white dark:border-gray-700"
                 />
-                <Button onClick={handleAddTag}>Add Tag</Button>
+                <Button 
+                  onClick={handleAddTag}
+                  className="dark:bg-blue-600 dark:hover:bg-blue-700"
+                >
+                  Add Tag
+                </Button>
               </div>
 
               {allTags.length > 0 && (
                 <div className="mt-2">
-                  <Label className="font-medium">Quick add:</Label>
+                  <Label className="font-medium dark:text-white">Quick add:</Label>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {allTags.map((tag) => (
                       <button
                         key={tag}
-                        className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs"
+                        className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs"
                         onClick={() => {
                           setNewTag(tag);
                         }}
@@ -1587,11 +1593,16 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
             <Button
               variant="outline"
               onClick={() => setEditingTab(null)}
-              className="bg-white hover:bg-gray-50"
+              className="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit}>Save Changes</Button>
+            <Button 
+              onClick={handleSaveEdit}
+              className="dark:bg-blue-600 dark:hover:bg-blue-700"
+            >
+              Save Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1602,7 +1613,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
   return (
     <>
       <Dialog open={isVisible} onOpenChange={handleOpenChange}>
-        <DialogContent className="dark:bg-gray-900 dark:text-white">
+        <DialogContent className="dark:bg-gray-900 dark:text-white max-w-4xl max-h-[90vh] overflow-hidden">
           <TabDialog 
             tabs={tabs} 
             onOpenSuspensionSettings={() => setShowSuspensionSettings(true)}
@@ -1613,13 +1624,13 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
       </Dialog>
 
       <Dialog open={showSuspensionSettings} onOpenChange={setShowSuspensionSettings}>
-        <DialogContent>
+        <DialogContent className="dark:bg-gray-900 dark:text-white max-w-lg">
           <DialogHeader>
-            <DialogTitle>Suspension Settings</DialogTitle>
+            <DialogTitle className="text-xl font-semibold dark:text-white">Suspension Settings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Label htmlFor="enabled">Enable Tab Suspension</Label>
+              <Label htmlFor="enabled" className="dark:text-white">Enable Tab Suspension</Label>
               <input
                 type="checkbox"
                 id="enabled"
@@ -1630,10 +1641,11 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                     enabled: e.target.checked,
                   })
                 }
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="defaultDelay">Default Delay (minutes)</Label>
+              <Label htmlFor="defaultDelay" className="dark:text-white">Default Delay (minutes)</Label>
               <Input
                 type="number"
                 id="defaultDelay"
@@ -1644,10 +1656,11 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                     defaultDelay: parseInt(e.target.value, 10),
                   })
                 }
+                className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="memoryThreshold">Memory Threshold (MB)</Label>
+              <Label htmlFor="memoryThreshold" className="dark:text-white">Memory Threshold (MB)</Label>
               <Input
                 type="number"
                 id="memoryThreshold"
@@ -1658,10 +1671,11 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                     memoryThreshold: parseInt(e.target.value, 10) * 1024 * 1024,
                   })
                 }
+                className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fasterDelay">Faster Delay (minutes)</Label>
+              <Label htmlFor="fasterDelay" className="dark:text-white">Faster Delay (minutes)</Label>
               <Input
                 type="number"
                 id="fasterDelay"
@@ -1672,15 +1686,16 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                     fasterDelay: parseInt(e.target.value, 10),
                   })
                 }
+                className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
               />
             </div>
             <div className="space-y-2">
-              <Label>Suspension Rules</Label>
+              <Label className="dark:text-white">Suspension Rules</Label>
               <div className="space-y-2">
                 {suspensionSettings.rules.map((rule, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-2 border rounded"
+                    className="flex items-center gap-2 p-2 border rounded dark:border-gray-700"
                   >
                     <select
                       value={rule.type}
@@ -1695,7 +1710,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                           rules: newRules,
                         }));
                       }}
-                      className="px-2 py-1 rounded border"
+                      className="px-2 py-1 rounded border dark:bg-gray-800 dark:text-white dark:border-gray-700"
                     >
                       <option value="domain">Domain</option>
                       <option value="path">Path</option>
@@ -1713,6 +1728,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                       placeholder={
                         rule.type === "domain" ? "example.com" : "/path"
                       }
+                      className="dark:bg-gray-800 dark:text-white dark:border-gray-700"
                     />
                     <select
                       value={rule.action}
@@ -1727,7 +1743,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                           rules: newRules,
                         }));
                       }}
-                      className="px-2 py-1 rounded border"
+                      className="px-2 py-1 rounded border dark:bg-gray-800 dark:text-white dark:border-gray-700"
                     >
                       <option value="never">Never Suspend</option>
                       <option value="faster">Suspend Faster</option>
@@ -1761,17 +1777,18 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                       rules: [...prev.rules, newRule],
                     }));
                   }}
+                  className="mt-2"
                 >
                   Add Rule
                 </Button>
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-6">
             <Button
               variant="outline"
               onClick={() => setShowSuspensionSettings(false)}
-              className="mr-2"
+              className="mr-2 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
             >
               Cancel
             </Button>
@@ -1780,6 +1797,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
                 saveTabsData();
                 setShowSuspensionSettings(false);
               }}
+              className="dark:bg-blue-600 dark:hover:bg-blue-700"
             >
               Save Changes
             </Button>
@@ -1787,22 +1805,24 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
         </DialogContent>
       </Dialog>
 
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleOpenAllFiltered}
-        className="bg-gray-100 hover:bg-gray-200"
-      >
-        Open All ({filteredItems.length})
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setShowSuspensionSettings(true)}
-        className="bg-white hover:bg-gray-50"
-      >
-        Suspension Settings
-      </Button>
+      <div className="fixed bottom-4 right-4 flex gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleOpenAllFiltered}
+          className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white"
+        >
+          Open All ({filteredItems.length})
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowSuspensionSettings(true)}
+          className="bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white"
+        >
+          Suspension Settings
+        </Button>
+      </div>
     </>
   );
 };

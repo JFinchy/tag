@@ -276,6 +276,7 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
 }
+/* Keep only styles that can't be easily converted to UnoCSS */
 /* Modal styles */
 .tabs-modal-overlay {
   position: fixed;

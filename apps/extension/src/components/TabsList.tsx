@@ -128,8 +128,8 @@ export function TabsList({
         <div
           key={item.id}
           className={`flex items-center justify-between rounded-md border p-2 ${
-            selectedIds.includes(item.id) ? 'border-blue-500' : ''
-          }`}
+            selectedIds.includes(item.id) ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
+          } hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150`}
         >
           <div className="flex items-center">
             <input
@@ -142,16 +142,16 @@ export function TabsList({
                   onSelect(selectedIds.filter((id) => id !== item.id));
                 }
               }}
-              className="mr-2"
+              className="mr-2 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800"
             />
             {item.favIconUrl && (
               <img src={item.favIconUrl} alt="" className="mr-2 h-4 w-4" />
             )}
             <div>
-              <div className="font-medium">{item.title}</div>
-              <div className="text-sm text-gray-500">{item.url}</div>
+              <div className="font-medium text-gray-900 dark:text-gray-100">{item.title}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{item.url}</div>
               {item.memoryUsage && (
-                <div className="mt-1 text-xs text-gray-500">
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {formatMemoryUsage(item.memoryUsage)}
                 </div>
               )}
@@ -159,12 +159,12 @@ export function TabsList({
                 {item.tags?.map((tag) => (
                   <span
                     key={tag}
-                    className="flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs"
+                    className="flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300"
                   >
                     {tag}
                     <button
                       onClick={() => onTagRemove(item.id, tag)}
-                      className="ml-1 text-gray-400 hover:text-gray-600"
+                      className="ml-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                     >
                       ×
                     </button>
@@ -178,11 +178,11 @@ export function TabsList({
                       onChange={(e) => setNewTag(e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, item.id)}
                       placeholder="Add tag..."
-                      className="w-24 rounded-md border px-2 py-0.5 text-xs"
+                      className="w-24 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-0.5 text-xs text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                     />
                     <button
                       onClick={() => handleTagAdd(item.id)}
-                      className="ml-1 rounded-md bg-blue-500 px-2 py-0.5 text-xs text-white"
+                      className="ml-1 rounded-md bg-blue-500 hover:bg-blue-600 px-2 py-0.5 text-xs text-white transition-colors"
                     >
                       Add
                     </button>
@@ -192,7 +192,7 @@ export function TabsList({
                   onClick={() =>
                     setEditingTabId(editingTabId === item.id ? null : item.id)
                   }
-                  className="rounded-full bg-gray-100 px-2 py-0.5 text-xs"
+                  className="rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2 py-0.5 text-xs text-gray-700 dark:text-gray-300 transition-colors"
                 >
                   {editingTabId === item.id ? 'Cancel' : '+'}
                 </button>
@@ -204,14 +204,14 @@ export function TabsList({
               item.suspended ? (
                 <button
                   onClick={() => onRestore(item.id)}
-                  className="rounded-md bg-green-500 px-3 py-1 text-sm text-white"
+                  className="rounded-md bg-green-500 hover:bg-green-600 px-3 py-1 text-sm text-white transition-colors"
                 >
                   Restore
                 </button>
               ) : (
                 <button
                   onClick={() => onSuspend(item.id)}
-                  className="rounded-md bg-yellow-500 px-3 py-1 text-sm text-white"
+                  className="rounded-md bg-yellow-500 hover:bg-yellow-600 px-3 py-1 text-sm text-white transition-colors"
                 >
                   Suspend
                 </button>
