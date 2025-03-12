@@ -91,17 +91,59 @@ export default defineBackground(() => {
   // Re-organize periodically (every 5 minutes)
   setInterval(organizeTabsByDomain, 5 * 60 * 1000);
 
+  // Function to get updated tabs with memory info
+  async function getUpdatedTabs() {
+    const tabs = await browser.tabs.query({});
+    const processInfo = await browser.processes.getProcessInfo(
+      tabs.map((tab) => tab.id!),
+    );
+
+    return tabs.map((tab) => ({
+      id: tab.id,
+      title: tab.title,
+      url: tab.url,
+      favIconUrl: tab.favIconUrl,
+      active: tab.active,
+      lastActiveTimestamp: Date.now(), // Current timestamp for active tabs
+      memoryUsage: processInfo[tab.id!]
+        ? {
+            jsHeapSizeUsed: processInfo[tab.id!].jsHeapSizeUsed,
+            privateMemory: processInfo[tab.id!].privateMemory,
+          }
+        : undefined,
+      tags: [],
+      labels: [],
+      customTitle: null,
+      description: null,
+      isBookmark: false,
+      suspended: false,
+    }));
+  }
+
+  // Function to notify all content scripts about tab updates
+  async function notifyTabsUpdated() {
+    const updatedTabs = await getUpdatedTabs();
+    browser.runtime
+      .sendMessage({
+        action: "tabsUpdated",
+        tabs: updatedTabs,
+      })
+      .catch(() => {
+        // Ignore errors - they occur when no content scripts are listening
+      });
+  }
+
+  // Listen for tab changes
+  browser.tabs.onCreated.addListener(() => notifyTabsUpdated());
+  browser.tabs.onRemoved.addListener(() => notifyTabsUpdated());
+  browser.tabs.onUpdated.addListener(() => notifyTabsUpdated());
+  browser.tabs.onMoved.addListener(() => notifyTabsUpdated());
+  browser.tabs.onActivated.addListener(() => notifyTabsUpdated());
+
   // Handle messages from content script
   browser.runtime.onMessage.addListener(async (message) => {
     if (message.action === "getTabs") {
-      const tabs = await browser.tabs.query({});
-      return tabs.map((tab) => ({
-        id: tab.id,
-        title: tab.title,
-        url: tab.url,
-        favIconUrl: tab.favIconUrl,
-        active: tab.active,
-      }));
+      return getUpdatedTabs();
     }
   });
 

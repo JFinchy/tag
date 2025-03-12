@@ -80,6 +80,7 @@ Ideas
 - Do something cool with reading list? Set deadlines? Auto tag?
 - Show memory of each tab
 - Separate by different user archetypes 
+- Track how long it has been since a link has been used and a tag has been used. Allow for easy cleanup/removal
 - Cmd k for search
   - Is there an option of doing this with another one? 
 - Notion like table with tags
@@ -93,3 +94,4 @@ Ideas
 - Shorty click through to bookmark links. A way to allow users to have the same bookmark multiple times
   - tag-manager.com/3r2lfdsdf3fds/?target=espn.com (with espn description and icon)
 - https://feature-sliced.design/ and https://github.com/moneyflow-dev/moneyflow/blob/main/src/app/app.tsx
+- Now let's make this a turbo monorepo and have a next app run in parallel. We should check for this website and send messages to it. The goal is for this to be a bigger better version of the modal
