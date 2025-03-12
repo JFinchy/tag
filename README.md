@@ -1,66 +1,129 @@
-# WXT + React
+# Tag - Smart Tab Management
 
-This template should help get you started developing with React in WXT.
+Tag is a browser extension that helps you manage your tabs efficiently with intelligent grouping, suspension, and organization features.
 
-## Usage
+## Features
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+- **Tab Management**: Organize and manage your browser tabs efficiently
+- **Tab Suspension**: Automatically suspend inactive tabs to save memory
+- **Tab Grouping**: Group related tabs together for better organization
+- **Memory Usage Tracking**: Monitor and optimize browser memory usage
+- **Keyboard Shortcuts**: Navigate and manage tabs quickly with keyboard shortcuts
+- **Dark Mode Support**: Enjoy a comfortable browsing experience in any lighting condition
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## Project Structure
 
-```bash
-$ npm install # or pnpm install or yarn install
+This project is organized as a monorepo using pnpm workspaces:
+
+```
+tag/
+├── apps/                  # Application packages
+│   └── extension/         # Browser extension
+│       └── entrypoints/   # Extension entry points (popup, tabs-modal, etc.)
+├── packages/              # Shared libraries and components
+│   ├── ui/                # UI components
+│   └── ...
+├── e2e/                   # End-to-end tests with Playwright
+├── .changeset/            # Changeset files for versioning
+├── scripts/               # Build and utility scripts
+└── ...
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+## Getting Started
 
-## Available Scripts
+### Prerequisites
 
-In the project directory, you can run:
+- [Node.js](https://nodejs.org/) (version specified in `.nvmrc`)
+- [pnpm](https://pnpm.io/) (version 8.9.0 or later)
+- [Git](https://git-scm.com/)
 
-### `npm run dev` or `npm start`
+### Installation
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/tag.git
+   cd tag
+   ```
 
-The page will reload if you make edits.<br>
+2. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-### `npm run build`
+3. Start the development server:
+   ```bash
+   pnpm dev
+   ```
 
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
+### Building for Production
 
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
+```bash
+pnpm build
+```
 
-## Deployment
+The built extension will be available in the `dist` folder.
 
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
+## Development
 
-Jakefinch.me
-https://www.namecheap.com/domains/registration/results/?domain=jakefinch
+### Commands
 
-## Inspo
+- `pnpm dev`: Start the development server
+- `pnpm build`: Build the extension for production
+- `pnpm lint`: Run linting
+- `pnpm test`: Run tests
+- `pnpm format`: Format code with Prettier
+- `pnpm type-check`: Run TypeScript type checking
 
-// tabs
-https://github.com/antonycourtney/tabli
-https://github.com/dsc/Tab-Manager
-https://github.com/ezg27/tab-view
-https://github.com/stefanXO/Tab-Manager-Plus
-https://github.com/greatsuspender/thegreatsuspender
-https://github.com/aciidic/thegreatsuspender-notrack
-https://chromewebstore.google.com/detail/tab-groups-extension/nplimhmoanghlebhdiboeellhgmgommi?hl=en
-https://chromewebstore.google.com/detail/vertical-tabs-in-side-pan/akahnknmcbmgodngfjcflnaljdbhnlfo
-https://www.failab.eu/app/tabius
-https://tabler.one/
-https://resources.arc.net/hc/en-us/articles/22731612065815-Automatic-GitHub-Live-Folders
+### Dependency Management
 
-// Session
-https://chromewebstore.google.com/detail/cookie-profile-switcher/dicajblfgcpecbkhkjaljphlmkhohelc?hl=en
-https://github.com/emerysteele/CookieProfileSwitcher
+We use [npm-check-updates](https://github.com/raineorshine/npm-check-updates) to manage dependencies:
 
-// search
-https://chromewebstore.google.com/detail/mdn-search/pdiegkghjahhhikafojgcmflngomilki
-https://github.com/hanguokai/mdn-search
+- `pnpm update-check`: Check for outdated dependencies
+- `pnpm update-check:minor`: Check for minor updates only
+- `pnpm update-check:patch`: Check for patch updates only
+- `pnpm update-check:interactive`: Interactive update mode
+- `pnpm update-deps`: Update all dependencies
 
-test
+### Versioning and Releases
+
+We use [Changesets](https://github.com/changesets/changesets) to manage versioning and changelogs:
+
+- `pnpm changeset:add`: Add a new changeset
+- `pnpm changeset:status`: Check the status of changesets
+- `pnpm changeset:version`: Update versions based on changesets
+- `pnpm changeset:publish`: Publish packages
+- `pnpm release`: Build, version, and publish in one command
+
+## Testing
+
+### Unit Tests
+
+```bash
+pnpm test
+```
+
+### End-to-End Tests
+
+We use Playwright for end-to-end testing, including accessibility testing with axe-core:
+
+```bash
+cd e2e
+pnpm test
+```
+
+For more information on our accessibility testing approach, see [e2e/README.md](e2e/README.md).
+
+## Contributing
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by various tab management extensions including:
+  - [The Great Suspender](https://github.com/greatsuspender/thegreatsuspender)
+  - [Tabli](https://github.com/antonycourtney/tabli)
+  - [Tab Manager Plus](https://github.com/stefanXO/Tab-Manager-Plus)
