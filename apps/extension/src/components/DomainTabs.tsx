@@ -1,4 +1,4 @@
-import { Button } from './ui/button';
+import { Button } from '@tag/ui';
 import { Loader2 } from 'lucide-react';
 import React from 'react';
 import { TabList } from './TabList';

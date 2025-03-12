@@ -17,15 +17,6 @@ import {
   DialogTitle,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Tabs,
-  TabsContent,
-  TabsList as TabsListUI,
-  TabsTrigger,
 } from "@tag/ui";
 import React, {
   KeyboardEvent as ReactKeyboardEvent,
@@ -35,7 +26,6 @@ import React, {
 } from "react";
 
 import { TabDialog } from '../../src/components/TabDialog';
-import TabsList from "./components/TabsList";
 
 // Define the browser API for TypeScript
 declare namespace browser {

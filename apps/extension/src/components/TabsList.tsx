@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import { Tab } from "../types";
+import { Tab } from "../../entrypoints/tabs-modal/types";
 
 interface TabsListProps {
   items: Tab[];
