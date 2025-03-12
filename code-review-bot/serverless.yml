@@ -1,0 +1,44 @@
+service: code-review-bot
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  memorySize: 1024
+  timeout: 30
+  environment:
+    GITHUB_TOKEN: ${env:GITHUB_TOKEN}
+    WEBHOOK_SECRET: ${env:WEBHOOK_SECRET}
+    OPENAI_API_KEY: ${env:OPENAI_API_KEY}
+    NODE_ENV: ${opt:stage, 'dev'}
+
+functions:
+  webhook:
+    handler: dist/lambda.handler
+    events:
+      - httpApi:
+          path: /webhook
+          method: post
+      - httpApi:
+          path: /health
+          method: get
+
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    exclude: ['aws-sdk']
+    target: 'node18'
+    platform: 'node'
+    format: 'esm'
+    define:
+      'process.env.NODE_ENV': "'${opt:stage, 'dev'}'"
+    outExtension:
+      '.js': '.mjs' 
