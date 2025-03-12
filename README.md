@@ -39,8 +39,10 @@ You can deploy the `dist` folder to any static host provider (netlify, surge, no
 
 Jakefinch.me
 https://www.namecheap.com/domains/registration/results/?domain=jakefinch
+
 ## Inspo
-// tabs 
+
+// tabs
 https://github.com/antonycourtney/tabli
 https://github.com/dsc/Tab-Manager
 https://github.com/ezg27/tab-view
@@ -53,10 +55,12 @@ https://www.failab.eu/app/tabius
 https://tabler.one/
 https://resources.arc.net/hc/en-us/articles/22731612065815-Automatic-GitHub-Live-Folders
 
-// Session 
+// Session
 https://chromewebstore.google.com/detail/cookie-profile-switcher/dicajblfgcpecbkhkjaljphlmkhohelc?hl=en
 https://github.com/emerysteele/CookieProfileSwitcher
 
 // search
 https://chromewebstore.google.com/detail/mdn-search/pdiegkghjahhhikafojgcmflngomilki
 https://github.com/hanguokai/mdn-search
+
+test
