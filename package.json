@@ -25,6 +25,7 @@
     "release": "pnpm build && pnpm changeset:version && pnpm changeset:publish"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
     "@commitlint/cli": "^19.0.3",
     "@commitlint/config-conventional": "^19.0.3",
     "@turbo/gen": "^1.12.4",

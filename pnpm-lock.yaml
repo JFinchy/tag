@@ -15,6 +15,9 @@ importers:
         specifier: ^8.17.5
         version: 8.17.5(eslint@9.22.0)
     devDependencies:
+      '@axe-core/playwright':
+        specifier: ^4.10.1
+        version: 4.10.1(playwright-core@1.51.0)
       '@commitlint/cli':
         specifier: ^19.0.3
         version: 19.8.0(@types/node@22.13.10)(typescript@5.8.2)
@@ -342,6 +345,15 @@ packages:
 
   /@antfu/utils@8.1.1:
     resolution: {integrity: sha512-Mex9nXf9vR6AhcXmMrlz/HVgYYZpVGJ6YlPgwl7UnaFpnshXs6EK/oa5Gpf3CzENMjkvEx2tQtntGnb7UtSTOQ==}
+    dev: true
+
+  /@axe-core/playwright@4.10.1(playwright-core@1.51.0):
+    resolution: {integrity: sha512-EV5t39VV68kuAfMKqb/RL+YjYKhfuGim9rgIaQ6Vntb2HgaCaau0h98Y3WEUqW1+PbdzxDtDNjFAipbtZuBmEA==}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
+    dependencies:
+      axe-core: 4.10.3
+      playwright-core: 1.51.0
     dev: true
 
   /@babel/code-frame@7.26.2:
@@ -8931,6 +8943,12 @@ packages:
       confbox: 0.2.1
       exsolve: 1.0.4
       pathe: 2.0.3
+    dev: true
+
+  /playwright-core@1.51.0:
+    resolution: {integrity: sha512-x47yPE3Zwhlil7wlNU/iktF7t2r/URR3VLbH6EknJd/04Qc/PSJ0EY3CMXipmglLG+zyRxW6HNo2EGbKLHPWMg==}
+    engines: {node: '>=18'}
+    hasBin: true
     dev: true
 
   /pluralize@8.0.0:
