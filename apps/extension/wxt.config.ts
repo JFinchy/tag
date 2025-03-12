@@ -31,18 +31,6 @@ export default defineConfig({
     ],
     action: {
       default_title: 'Tag',
-      default_icon: {
-        '16': '/src/assets/icon-16.png',
-        '32': '/src/assets/icon-32.png',
-        '48': '/src/assets/icon-48.png',
-        '128': '/src/assets/icon-128.png'
-      }
-    },
-    icons: {
-      '16': '/src/assets/icon-16.png',
-      '32': '/src/assets/icon-32.png',
-      '48': '/src/assets/icon-48.png',
-      '128': '/src/assets/icon-128.png'
     },
     commands: {
       'open-dialog': {

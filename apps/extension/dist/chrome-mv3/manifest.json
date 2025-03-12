@@ -3,12 +3,6 @@
   "name": "Tag",
   "description": "A better way to manage your tabs",
   "version": "0.0.1",
-  "icons": {
-    "16": "/src/assets/icon-16.png",
-    "32": "/src/assets/icon-32.png",
-    "48": "/src/assets/icon-48.png",
-    "128": "/src/assets/icon-128.png"
-  },
   "permissions": [
     "tabs",
     "bookmarks",
@@ -23,12 +17,6 @@
   ],
   "action": {
     "default_title": "Default Popup Title",
-    "default_icon": {
-      "16": "/src/assets/icon-16.png",
-      "32": "/src/assets/icon-32.png",
-      "48": "/src/assets/icon-48.png",
-      "128": "/src/assets/icon-128.png"
-    },
     "default_popup": "popup.html"
   },
   "commands": {

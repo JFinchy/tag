@@ -1,30 +1,38 @@
 import { Button, DialogHeader, DialogTitle, Input, Label } from '@tag/ui';
 import React, { useState } from 'react';
 
-import type { Tab } from '../types';
+import type { Tab } from '../../../extension/entrypoints/tabs-modal/types';
 import { browser } from 'wxt/browser';
 
 interface TabDialogProps {
   tabs: Tab[];
+  onOpenSuspensionSettings?: () => void;
+  onSuspendTab?: (tab: Tab) => void;
+  onRestoreTab?: (tab: Tab) => void;
 }
 
-export function TabDialog({ tabs }: TabDialogProps) {
+export function TabDialog({ 
+  tabs, 
+  onOpenSuspensionSettings,
+  onSuspendTab,
+  onRestoreTab,
+}: TabDialogProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [tagFilters, setTagFilters] = useState<string[]>([]);
 
   const filteredTabs = tabs.filter(tab => {
     const matchesSearch = !searchQuery || 
-      tab.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tab.url.toLowerCase().includes(searchQuery.toLowerCase());
+      (tab.title?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (tab.url?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
 
     const matchesTags = tagFilters.length === 0 ||
-      tagFilters.every(tag => tab.tags.includes(tag));
+      tagFilters.every(tag => tab.tags?.includes(tag) || false);
 
     return matchesSearch && matchesTags;
   });
 
   const allTags = Array.from(new Set(
-    tabs.flatMap(tab => tab.tags)
+    tabs.flatMap(tab => tab.tags || [])
   )).sort();
 
   const handleTagClick = (tag: string) => {
@@ -36,7 +44,9 @@ export function TabDialog({ tabs }: TabDialogProps) {
   };
 
   const handleTabClick = async (tab: Tab) => {
-    if (tab.id) {
+    if (tab.suspended && onRestoreTab) {
+      await onRestoreTab(tab);
+    } else if (tab.id && tab.windowId) {
       await browser.tabs.update(tab.id, { active: true });
       await browser.windows.update(tab.windowId, { focused: true });
     }
@@ -60,14 +70,40 @@ export function TabDialog({ tabs }: TabDialogProps) {
 
   const handleCloseTab = async (tab: Tab) => {
     if (tab.id) {
-      await browser.tabs.remove(tab.id);
+      try {
+        await browser.tabs.remove(tab.id);
+      } catch (error) {
+        console.error("Error closing tab:", error);
+      }
     }
+  };
+
+  const getTimeSince = (timestamp?: number): string => {
+    if (!timestamp) return "Never";
+
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+
+    if (seconds < 60) return "Just now";
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return `${Math.floor(seconds / 604800)}w ago`;
   };
 
   return (
     <div className="flex flex-col h-full">
       <DialogHeader className="space-y-4">
-        <DialogTitle>Manage Tabs</DialogTitle>
+        <div className="flex items-center justify-between">
+          <DialogTitle>Manage Tabs</DialogTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenSuspensionSettings}
+            className="dark:bg-gray-800 dark:text-white"
+          >
+            Suspension Settings
+          </Button>
+        </div>
         <div className="space-y-4">
           <div>
             <Label htmlFor="search">Search</Label>
@@ -121,9 +157,9 @@ export function TabDialog({ tabs }: TabDialogProps) {
                 <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
                   {tab.url}
                 </div>
-                {tab.tags.length > 0 && (
+                {tab.tags && tab.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {tab.tags.map(tag => (
+                    {tab.tags.map((tag: string) => (
                       <span
                         key={tag}
                         className="px-1.5 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-700"
@@ -136,10 +172,39 @@ export function TabDialog({ tabs }: TabDialogProps) {
               </div>
               {tab.memoryUsage && (
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {Math.round(tab.memoryUsage.privateMemory / 1024 / 1024)} MB
+                  {Math.round(tab.memoryUsage.privateMemory || 0 / 1024 / 1024)} MB
+                  {(tab.memoryUsage.privateMemory || 0) >= 500 * 1024 * 1024 && (
+                    <span className="ml-1 text-amber-500">⚠️</span>
+                  )}
                 </div>
               )}
               <div className="flex items-center gap-2">
+                {tab.suspended && (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Suspended {getTimeSince(tab.lastSuspendedTimestamp)}
+                  </span>
+                )}
+                {!tab.suspended && tab.lastActiveTimestamp && (
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    Active {getTimeSince(tab.lastActiveTimestamp)}
+                  </span>
+                )}
+                {onSuspendTab && onRestoreTab && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (tab.suspended) {
+                        onRestoreTab(tab);
+                      } else {
+                        onSuspendTab(tab);
+                      }
+                    }}
+                  >
+                    {tab.suspended ? '↺' : '⏸'}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

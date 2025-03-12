@@ -8,24 +8,27 @@ export interface Tab {
   originalUrl?: string;
   favIconUrl?: string;
   active: boolean;
-  tags?: string[];
+  windowId?: number;
+  tags: string[];
   labels?: string[];
+  isBookmark?: boolean;
+  bookmarked?: boolean;
   customTitle?: string | null;
   description?: string | null;
-  isBookmark?: boolean;
   lastActiveTimestamp?: number;
   memoryUsage?: {
     jsHeapSizeUsed?: number;
     privateMemory?: number;
   };
   suspended?: boolean;
-  suspendedUrl?: string; // Store the original URL when suspended
+  suspendedUrl?: string;
   lastSuspendedTimestamp?: number;
 }
 
 // Define props for the App component
 export interface AppProps {
-  initialTabs?: BaseTab[];
+  tabs: Tab[];
+  bookmarks: Tab[];
 }
 
 // Define props for the TabsList component
@@ -39,21 +42,14 @@ export interface TabsListProps {
 }
 
 export interface TagStats {
-  tag: string;
-  lastActiveTimestamp: number;
-  itemCount: number;
-  items: Array<{
-    id: number;
-    title: string;
-    lastActiveTimestamp: number;
-  }>;
+  count: number;
 }
 
 // Add suspension settings interfaces
 export interface SuspensionRule {
-  type: 'domain' | 'path';
+  type: "domain" | "path";
   value: string;
-  action: 'never' | 'faster' | 'normal';
+  action: "never" | "faster" | "normal";
   expiresAt?: number;
 }
 
@@ -79,12 +75,6 @@ export interface TabsData {
       lastSuspendedTimestamp?: number;
     }
   >;
-  tagStats: Record<
-    string,
-    {
-      lastActiveTimestamp: number;
-      itemCount: number;
-    }
-  >;
+  tagStats: Record<string, TagStats>;
   suspensionSettings?: SuspensionSettings;
 }

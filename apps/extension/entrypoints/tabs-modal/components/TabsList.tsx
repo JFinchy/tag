@@ -1,31 +1,28 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import { Tab } from "../types";
 
 interface TabsListProps {
-  tabs: Tab[];
-  onTabClick: (tabId: number) => void;
-  selectedTabIds: number[];
-  onRemoveTag: (tabId: number, tag: string) => void;
-  onEditTab: (tab: Tab) => void;
-  onReorderTabs?: (startIndex: number, endIndex: number) => void;
-  focusedTabIndex: number;
-  onSuspendTab?: (tab: Tab) => void;
-  onRestoreTab?: (tab: Tab) => void;
+  items: Tab[];
+  selectedIds: number[];
+  onSelect: (ids: number[]) => void;
+  onTagAdd: (tabId: number, tag: string) => void;
+  onTagRemove: (tabId: number, tag: string) => void;
+  onSuspend: (tabId: number) => void;
+  onRestore: (tabId: number) => void;
 }
 
-const TabsList: React.FC<TabsListProps> = ({
-  tabs,
-  onTabClick,
-  selectedTabIds,
-  onRemoveTag,
-  onEditTab,
-  onReorderTabs,
-  focusedTabIndex,
-  onSuspendTab,
-  onRestoreTab,
-}) => {
-  const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
+export function TabsList({
+  items,
+  selectedIds,
+  onSelect,
+  onTagAdd,
+  onTagRemove,
+  onSuspend,
+  onRestore,
+}: TabsListProps) {
+  const [editingTabId, setEditingTabId] = useState<number | null>(null);
+  const [newTag, setNewTag] = useState('');
 
   const getTimeSince = (timestamp?: number): string => {
     if (!timestamp) return "Never accessed";
@@ -56,245 +53,173 @@ const TabsList: React.FC<TabsListProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedTabIds.length) return;
+      if (!selectedIds.length) return;
 
-      const selectedIndex = tabs.findIndex((tab) =>
-        selectedTabIds.includes(tab.id),
+      const selectedIndex = items.findIndex((tab) =>
+        selectedIds.includes(tab.id),
       );
       if (selectedIndex === -1) return;
 
       if (e.key === "j" || e.key === "ArrowDown") {
         e.preventDefault();
-        if (selectedIndex < tabs.length - 1 && onReorderTabs) {
-          onReorderTabs(selectedIndex, selectedIndex + 1);
+        if (selectedIndex < items.length - 1) {
+          onSelect([...selectedIds, items[selectedIndex + 1].id]);
         }
       } else if (e.key === "k" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (selectedIndex > 0 && onReorderTabs) {
-          onReorderTabs(selectedIndex, selectedIndex - 1);
+        if (selectedIndex > 0) {
+          onSelect(selectedIds.filter((id) => id !== items[selectedIndex].id));
         }
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedTabIds, tabs, onReorderTabs]);
+  }, [selectedIds, items, onSelect]);
 
-  const handleDragStart = (
-    e: React.DragEvent<HTMLDivElement>,
-    index: number,
-  ) => {
-    setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-    e.currentTarget.classList.add("opacity-50");
-  };
-
-  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
-    setDraggedIndex(null);
-    e.currentTarget.classList.remove("opacity-50");
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (
-    e: React.DragEvent<HTMLDivElement>,
-    dropIndex: number,
-  ) => {
-    e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== dropIndex && onReorderTabs) {
-      onReorderTabs(draggedIndex, dropIndex);
+  const handleTagAdd = (tabId: number) => {
+    if (newTag.trim()) {
+      onTagAdd(tabId, newTag.trim());
+      setNewTag('');
+      setEditingTabId(null);
     }
-    setDraggedIndex(null);
   };
 
-  // Add memory warning threshold (500MB)
-  const MEMORY_WARNING_THRESHOLD = 500 * 1024 * 1024; // 500MB in bytes
+  const handleKeyDown = (e: React.KeyboardEvent, tabId: number) => {
+    if (e.key === 'Enter') {
+      handleTagAdd(tabId);
+    }
+  };
+
+  const formatMemoryUsage = (memoryUsage?: { jsHeapSizeUsed?: number; privateMemory?: number }) => {
+    if (!memoryUsage) return null;
+
+    const formatBytes = (bytes?: number) => {
+      if (!bytes) return null;
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let value = bytes;
+      let unitIndex = 0;
+
+      while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex++;
+      }
+
+      return `${value.toFixed(1)} ${units[unitIndex]}`;
+    };
+
+    const jsHeap = formatBytes(memoryUsage.jsHeapSizeUsed);
+    const privateMemory = formatBytes(memoryUsage.privateMemory);
+
+    if (jsHeap && privateMemory) {
+      return `JS: ${jsHeap}, Private: ${privateMemory}`;
+    } else if (jsHeap) {
+      return `JS: ${jsHeap}`;
+    } else if (privateMemory) {
+      return `Private: ${privateMemory}`;
+    }
+
+    return null;
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-4 h-full">
-      {tabs.map((tab, index) => (
+    <div className="space-y-2">
+      {items.map((item) => (
         <div
-          key={tab.id}
-          draggable
-          onDragStart={(e) => handleDragStart(e, index)}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e, index)}
-          onClick={() => onTabClick(tab.id)}
-          className={`
-            relative flex flex-col p-3 rounded cursor-pointer border border-gray-200 h-full
-            hover:bg-gray-100 transition-colors
-            ${tab.active ? "bg-blue-50 border-l-3 border-l-blue-600" : ""}
-            ${selectedTabIds.includes(tab.id) ? "bg-blue-50/10 border-blue-600/30 ring-2 ring-blue-500" : ""}
-            ${tab.isBookmark ? "border-l-3 border-l-yellow-500" : ""}
-            ${focusedTabIndex === index ? "ring-2 ring-blue-400" : ""}
-            ${draggedIndex === index ? "opacity-50" : ""}
-            ${tab.memoryUsage?.privateMemory && tab.memoryUsage.privateMemory >= MEMORY_WARNING_THRESHOLD ? "border-red-200" : ""}
-            ${tab.suspended ? "opacity-50" : ""}
-            select-none
-          `}
+          key={item.id}
+          className={`flex items-center justify-between rounded-md border p-2 ${
+            selectedIds.includes(item.id) ? 'border-blue-500' : ''
+          }`}
         >
-          {/* Add suspension badge */}
-          {tab.suspended && (
-            <div className="absolute top-0 right-0 p-1">
-              <span className="inline-flex items-center px-2 py-1 bg-gray-50 text-gray-700 rounded-full text-xs font-medium border border-gray-200">
-                Suspended
-              </span>
-            </div>
-          )}
-
           <div className="flex items-center">
-            <div className="mr-2 text-gray-400 select-none cursor-move">⋮⋮</div>
-            {tab.favIconUrl && (
-              <img
-                src={tab.favIconUrl}
-                alt=""
-                className="w-4 h-4 mr-3 flex-shrink-0"
-              />
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(item.id)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  onSelect([...selectedIds, item.id]);
+                } else {
+                  onSelect(selectedIds.filter((id) => id !== item.id));
+                }
+              }}
+              className="mr-2"
+            />
+            {item.favIconUrl && (
+              <img src={item.favIconUrl} alt="" className="mr-2 h-4 w-4" />
             )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="truncate text-gray-900">
-                  {tab.customTitle || tab.title}
+            <div>
+              <div className="font-medium">{item.title}</div>
+              <div className="text-sm text-gray-500">{item.url}</div>
+              {item.memoryUsage && (
+                <div className="mt-1 text-xs text-gray-500">
+                  {formatMemoryUsage(item.memoryUsage)}
                 </div>
-                {tab.active && (
-                  <span className="shrink-0 px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-800 rounded-full">
-                    Active Now
+              )}
+              <div className="mt-1 flex flex-wrap gap-1">
+                {item.tags?.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => onTagRemove(item.id, tag)}
+                      className="ml-1 text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
                   </span>
+                ))}
+                {editingTabId === item.id && (
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, item.id)}
+                      placeholder="Add tag..."
+                      className="w-24 rounded-md border px-2 py-0.5 text-xs"
+                    />
+                    <button
+                      onClick={() => handleTagAdd(item.id)}
+                      className="ml-1 rounded-md bg-blue-500 px-2 py-0.5 text-xs text-white"
+                    >
+                      Add
+                    </button>
+                  </div>
                 )}
-              </div>
-              {tab.isBookmark && tab.originalUrl && (
-                <div className="truncate text-xs text-gray-500">
-                  {tab.originalUrl}
-                </div>
-              )}
-              {!tab.isBookmark && (
-                <div className="truncate text-xs text-gray-500">
-                  Last opened: {getTimeSince(tab.lastActiveTimestamp)}
-                </div>
-              )}
-            </div>
-            <div className="flex gap-1 ml-2">
-              {/* Add suspend/restore button */}
-              {!tab.isBookmark && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (tab.suspended) {
-                      onRestoreTab?.(tab);
-                    } else {
-                      onSuspendTab?.(tab);
-                    }
-                  }}
-                  className="p-1 rounded hover:bg-gray-200 text-gray-600"
-                  title={tab.suspended ? "Restore Tab" : "Suspend Tab"}
+                  onClick={() =>
+                    setEditingTabId(editingTabId === item.id ? null : item.id)
+                  }
+                  className="rounded-full bg-gray-100 px-2 py-0.5 text-xs"
                 >
-                  {tab.suspended ? "↺" : "⏸"}
+                  {editingTabId === item.id ? 'Cancel' : '+'}
                 </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditTab(tab);
-                }}
-                className="p-1 rounded hover:bg-gray-200 text-gray-600"
-              >
-                ✎
-              </button>
+              </div>
             </div>
           </div>
-
-          {(tab.description ||
-            (tab.tags && tab.tags.length > 0) ||
-            tab.lastActiveTimestamp ||
-            tab.memoryUsage ||
-            tab.suspended) && (
-            <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-dashed border-gray-200">
-              {tab.active && (
-                <span className="inline-block px-2 py-0.5 bg-blue-600 text-white rounded text-xs">
-                  Active
-                </span>
-              )}
-              {tab.isBookmark && (
-                <span className="inline-block px-2 py-0.5 bg-yellow-500 text-white rounded text-xs">
-                  Bookmark
-                </span>
-              )}
-              {tab.suspended && (
-                <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                  Suspended {getTimeSince(tab.lastSuspendedTimestamp)}
-                </span>
-              )}
-              <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                {getTimeSince(tab.lastActiveTimestamp)}
-              </span>
-              {tab.description && (
-                <div className="w-full text-sm text-gray-600 mt-1 line-clamp-2">
-                  {tab.description}
-                </div>
-              )}
-              {tab.tags?.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200"
+          <div className="flex items-center space-x-2">
+            {!item.isBookmark && (
+              item.suspended ? (
+                <button
+                  onClick={() => onRestore(item.id)}
+                  className="rounded-md bg-green-500 px-3 py-1 text-sm text-white"
                 >
-                  {tag}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveTag(tab.id, tag);
-                    }}
-                    className="ml-1 hover:text-red-500"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {!tab.isBookmark && tab.memoryUsage && (
-                <div className="flex gap-1">
-                  {tab.memoryUsage.jsHeapSizeUsed && (
-                    <span
-                      className={`
-                        inline-block px-2 py-0.5 rounded text-xs border
-                        ${
-                          tab.memoryUsage.jsHeapSizeUsed >=
-                          MEMORY_WARNING_THRESHOLD
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-purple-50 text-purple-700 border-purple-200"
-                        }
-                      `}
-                      title="JavaScript Heap Size"
-                    >
-                      JS: {formatMemorySize(tab.memoryUsage.jsHeapSizeUsed)}
-                    </span>
-                  )}
-                  {tab.memoryUsage.privateMemory && (
-                    <span
-                      className={`
-                        inline-block px-2 py-0.5 rounded text-xs border
-                        ${
-                          tab.memoryUsage.privateMemory >=
-                          MEMORY_WARNING_THRESHOLD
-                            ? "bg-red-50 text-red-700 border-red-200"
-                            : "bg-green-50 text-green-700 border-green-200"
-                        }
-                      `}
-                      title="Private Memory"
-                    >
-                      Mem: {formatMemorySize(tab.memoryUsage.privateMemory)}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                  Restore
+                </button>
+              ) : (
+                <button
+                  onClick={() => onSuspend(item.id)}
+                  className="rounded-md bg-yellow-500 px-3 py-1 text-sm text-white"
+                >
+                  Suspend
+                </button>
+              )
+            )}
+          </div>
         </div>
       ))}
     </div>
   );
-};
-
-export default TabsList;
+}

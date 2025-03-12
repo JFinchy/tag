@@ -17,6 +17,15 @@ import {
   DialogTitle,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Tabs,
+  TabsContent,
+  TabsList as TabsListUI,
+  TabsTrigger,
 } from "@tag/ui";
 import React, {
   KeyboardEvent as ReactKeyboardEvent,
@@ -135,10 +144,10 @@ const DEFAULT_SUSPENSION_SETTINGS: SuspensionSettings = {
   rules: [],
 };
 
-const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
+const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
-  const [bookmarks, setBookmarks] = useState<Tab[]>([]);
+  const [bookmarks, setBookmarks] = useState<Tab[]>(initialBookmarks);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTabIds, setSelectedTabIds] = useState<number[]>([]);
   const [newTag, setNewTag] = useState("");
@@ -304,72 +313,24 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   };
 
   useEffect(() => {
-    // Add keyboard shortcut listener
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsVisible((prev) => !prev);
+        setIsVisible(prev => !prev);
+        setIsOpen(prev => !prev); // Also toggle the Dialog's open state
       }
 
       // Close modal on Escape key
       if (e.key === "Escape" && isVisible) {
-        if (editingTab) {
-          // If in edit mode, exit edit mode first
-          setEditingTab(null);
-        } else {
-          setIsVisible(false);
-        }
-      }
-
-      // Handle arrow key navigation when modal is visible and not in edit mode
-      if (isVisible && !editingTab) {
-        switch (e.key) {
-          case "ArrowDown":
-            e.preventDefault();
-            if (filteredItems.length > 0) {
-              setFocusedTabIndex((prev) => {
-                const newIndex = prev < filteredItems.length - 1 ? prev + 1 : 0;
-                return newIndex;
-              });
-            }
-            break;
-          case "ArrowUp":
-            e.preventDefault();
-            if (filteredItems.length > 0) {
-              setFocusedTabIndex((prev) => {
-                const newIndex = prev > 0 ? prev - 1 : filteredItems.length - 1;
-                return newIndex;
-              });
-            }
-            break;
-          case "ArrowRight":
-            // Navigate to next page or section if implemented
-            break;
-          case "ArrowLeft":
-            // Navigate to previous page or section if implemented
-            break;
-          case "Enter":
-            // Select the focused tab
-            if (
-              focusedTabIndex >= 0 &&
-              focusedTabIndex < filteredItems.length
-            ) {
-              handleTabClick(filteredItems[focusedTabIndex].id);
-            }
-            break;
-          default:
-            break;
-        }
+        setIsVisible(false);
+        setIsOpen(false);
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isVisible, editingTab, filteredItems, focusedTabIndex]);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isVisible]);
 
   // Listen for tab updates from the content script
   useEffect(() => {
@@ -599,28 +560,15 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     saveTabsData();
   };
 
-  const handleTabClick = (tabId: number) => {
-    if (editingTab) return;
-
-    if (isVisible) {
-      setSelectedTabIds((prevSelectedIds) => {
-        if (prevSelectedIds.includes(tabId)) {
-          return prevSelectedIds.filter((id) => id !== tabId);
-        } else {
-          return [...prevSelectedIds, tabId];
-        }
-      });
+  const handleTabClick = async (tab: Tab) => {
+    if (tab.suspended) {
+      await restoreTab(tab);
     } else {
-      const clickedItem = allItems.find((item) => item.id === tabId);
-      if (clickedItem) {
-        updateTimestamps(tabId, clickedItem.tags);
-        if (clickedItem.isBookmark) {
-          // Use original URL for bookmarks
-          const urlToOpen = clickedItem.originalUrl || clickedItem.url;
-          browser.tabs.create({ url: urlToOpen });
-        } else {
-          browser.tabs.update(tabId, { active: true });
-        }
+      try {
+        await browser.tabs.update(tab.id, { active: true });
+        await browser.windows.update(tab.windowId, { focused: true });
+      } catch (error) {
+        console.error("Error activating tab:", error);
       }
     }
   };
@@ -751,95 +699,72 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
   const saveTabsData = async () => {
     try {
-      const tabsData = [...tabs, ...bookmarks].reduce(
-        (acc, item) => {
-          const data: Record<string, unknown> = {};
-
-          if (item.tags && item.tags.length > 0) {
-            data.tags = item.tags;
-          }
-          if (item.customTitle) {
-            data.customTitle = item.customTitle;
-          }
-          if (item.description) {
-            data.description = item.description;
-          }
-          if (item.lastActiveTimestamp) {
-            data.lastActiveTimestamp = item.lastActiveTimestamp;
-          }
-
-          if (Object.keys(data).length > 0) {
-            acc[item.id] = data;
-          }
-          return acc;
-        },
-        {} as Record<number, Record<string, unknown>>,
-      );
-
-      // Save both tabs data and tag stats
       await browser.storage.local.set({
-        tabsData,
-        tagStats,
+        tabs: tabs.map((tab) => ({
+          ...tab,
+          tags: tab.tags || [],
+          customTitle: tab.customTitle || null,
+          description: tab.description || null,
+        })),
+        bookmarks: bookmarks.map((bookmark) => ({
+          ...bookmark,
+          tags: bookmark.tags || [],
+          customTitle: bookmark.customTitle || null,
+          description: bookmark.description || null,
+        })),
         suspensionSettings,
       });
     } catch (error) {
-      console.error("Error saving data:", error);
+      console.error("Error saving tabs data:", error);
     }
   };
 
+  // Add effect to load suspension settings from storage
+  useEffect(() => {
+    const loadSuspensionSettings = async () => {
+      try {
+        const data = await browser.storage.local.get("suspensionSettings");
+        if (data.suspensionSettings) {
+          setSuspensionSettings(data.suspensionSettings);
+        }
+      } catch (error) {
+        console.error("Error loading suspension settings:", error);
+      }
+    };
+
+    loadSuspensionSettings();
+  }, []);
+
   const loadTabsData = async () => {
     try {
-      const result = await browser.storage.local.get([
-        "tabsData",
-        "tagStats",
+      const data = await browser.storage.local.get([
+        "tabs",
+        "bookmarks",
         "suspensionSettings",
       ]);
-      const storedData =
-        (result.tabsData as Record<number, Record<string, unknown>>) || {};
-      const storedTagStats =
-        (result.tagStats as Record<string, TagStats>) || {};
 
-      setTabs((prevTabs) =>
-        prevTabs.map((tab) => {
-          const data = storedData[tab.id];
-          if (!data) return tab;
-
-          return {
-            ...tab,
-            tags: (data.tags as string[]) || [],
-            customTitle: (data.customTitle as string) || null,
-            description: (data.description as string) || null,
-            lastActiveTimestamp:
-              (data.lastActiveTimestamp as number) || undefined,
-          };
-        }),
-      );
-
-      setBookmarks((prevBookmarks) =>
-        prevBookmarks.map((bookmark) => {
-          const data = storedData[bookmark.id];
-          if (!data) return bookmark;
-
-          return {
-            ...bookmark,
-            tags: (data.tags as string[]) || [],
-            customTitle: (data.customTitle as string) || null,
-            description: (data.description as string) || null,
-            lastActiveTimestamp:
-              (data.lastActiveTimestamp as number) || undefined,
-          };
-        }),
-      );
-
-      setTagStats(storedTagStats);
-
-      // Load suspension settings
-      const storedSettings = result.suspensionSettings as SuspensionSettings;
-      if (storedSettings) {
-        setSuspensionSettings(storedSettings);
+      if (data.tabs) {
+        setTabs((prevTabs) =>
+          prevTabs.map((tab) => {
+            const savedTab = data.tabs.find((t: Tab) => t.id === tab.id);
+            return savedTab
+              ? { ...tab, ...savedTab }
+              : { ...tab, tags: [], customTitle: null, description: null };
+          }),
+        );
       }
+
+      if (data.bookmarks) {
+        setBookmarks(data.bookmarks);
+      }
+
+      if (data.suspensionSettings) {
+        setSuspensionSettings(data.suspensionSettings);
+      }
+
+      updateAllTagsList([...tabs, ...bookmarks]);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error loading tabs data:", error);
     }
   };
 
@@ -1262,7 +1187,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
     }
   };
 
-  // Add effect to check for tabs to suspend
+  // Add effect to periodically check for tabs that should be suspended
   useEffect(() => {
     if (!suspensionSettings.enabled) return;
 
@@ -1274,257 +1199,14 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
       });
     };
 
-    const interval = setInterval(checkForSuspension, 60000); // Check every minute
+    // Check immediately
+    checkForSuspension();
+
+    // Then check every minute
+    const interval = setInterval(checkForSuspension, 60 * 1000);
+
     return () => clearInterval(interval);
   }, [tabs, suspensionSettings]);
-
-  // Add suspension settings dialog
-  const SuspensionSettingsDialog = () => (
-    <Dialog
-      open={showSuspensionSettings}
-      onOpenChange={setShowSuspensionSettings}
-    >
-      <DialogContent className="w-full p-6">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            Tab Suspension Settings
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="suspension-enabled">Enable Tab Suspension</Label>
-            <input
-              type="checkbox"
-              id="suspension-enabled"
-              checked={suspensionSettings.enabled}
-              onChange={(e) =>
-                setSuspensionSettings((prev) => ({
-                  ...prev,
-                  enabled: e.target.checked,
-                }))
-              }
-              className="h-4 w-4"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="default-delay">
-              Default Suspension Delay (minutes)
-            </Label>
-            <Input
-              id="default-delay"
-              type="number"
-              min="1"
-              value={suspensionSettings.defaultDelay}
-              onChange={(e) =>
-                setSuspensionSettings((prev) => ({
-                  ...prev,
-                  defaultDelay: Math.max(1, parseInt(e.target.value) || 1),
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="memory-threshold">
-              Memory Threshold for Faster Suspension (MB)
-            </Label>
-            <Input
-              id="memory-threshold"
-              type="number"
-              min="100"
-              value={Math.round(
-                suspensionSettings.memoryThreshold / (1024 * 1024),
-              )}
-              onChange={(e) =>
-                setSuspensionSettings((prev) => ({
-                  ...prev,
-                  memoryThreshold:
-                    Math.max(100, parseInt(e.target.value) || 100) *
-                    1024 *
-                    1024,
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="faster-delay">
-              Faster Suspension Delay (minutes)
-            </Label>
-            <Input
-              id="faster-delay"
-              type="number"
-              min="1"
-              value={suspensionSettings.fasterDelay}
-              onChange={(e) =>
-                setSuspensionSettings((prev) => ({
-                  ...prev,
-                  fasterDelay: Math.max(1, parseInt(e.target.value) || 1),
-                }))
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Suspension Rules</Label>
-            <div className="space-y-2">
-              {suspensionSettings.rules.map((rule, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 p-2 border rounded"
-                >
-                  <select
-                    value={rule.type}
-                    onChange={(e) => {
-                      const newRules = [...suspensionSettings.rules];
-                      newRules[index] = {
-                        ...rule,
-                        type: e.target.value as "domain" | "path",
-                      };
-                      setSuspensionSettings((prev) => ({
-                        ...prev,
-                        rules: newRules,
-                      }));
-                    }}
-                    className="px-2 py-1 rounded border"
-                  >
-                    <option value="domain">Domain</option>
-                    <option value="path">Path</option>
-                  </select>
-                  <Input
-                    value={rule.value}
-                    onChange={(e) => {
-                      const newRules = [...suspensionSettings.rules];
-                      newRules[index] = { ...rule, value: e.target.value };
-                      setSuspensionSettings((prev) => ({
-                        ...prev,
-                        rules: newRules,
-                      }));
-                    }}
-                    placeholder={
-                      rule.type === "domain" ? "example.com" : "/path"
-                    }
-                  />
-                  <select
-                    value={rule.action}
-                    onChange={(e) => {
-                      const newRules = [...suspensionSettings.rules];
-                      newRules[index] = {
-                        ...rule,
-                        action: e.target.value as "never" | "faster" | "normal",
-                      };
-                      setSuspensionSettings((prev) => ({
-                        ...prev,
-                        rules: newRules,
-                      }));
-                    }}
-                    className="px-2 py-1 rounded border"
-                  >
-                    <option value="never">Never Suspend</option>
-                    <option value="faster">Suspend Faster</option>
-                    <option value="normal">Normal Suspension</option>
-                  </select>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      const newRules = suspensionSettings.rules.filter(
-                        (_, i) => i !== index,
-                      );
-                      setSuspensionSettings((prev) => ({
-                        ...prev,
-                        rules: newRules,
-                      }));
-                    }}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ))}
-              <Button
-                onClick={() => {
-                  const newRule: SuspensionRule = {
-                    type: "domain",
-                    value: "",
-                    action: "never",
-                  };
-                  setSuspensionSettings((prev) => ({
-                    ...prev,
-                    rules: [...prev.rules, newRule],
-                  }));
-                }}
-              >
-                Add Rule
-              </Button>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="flex justify-end gap-2 mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setShowSuspensionSettings(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              saveTabsData();
-              setShowSuspensionSettings(false);
-            }}
-          >
-            Save Changes
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-
-  // Add bookmark button to the header
-  const renderHeaderButtons = () => (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleToggleBookmarks}
-        className="bg-white hover:bg-gray-50"
-      >
-        {showBookmarks ? "Hide Bookmarks" : "Show Bookmarks"}
-      </Button>
-      {selectedTabIds.length === 1 && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const selectedTab = tabs.find((t) => t.id === selectedTabIds[0]);
-            if (selectedTab) {
-              createBookmark(selectedTab);
-            }
-          }}
-          className="bg-white hover:bg-gray-50"
-        >
-          Add Bookmark
-        </Button>
-      )}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={
-          selectedTabIds.length > 0 ? handleDeselectAll : handleSelectAll
-        }
-        className="bg-white hover:bg-gray-50"
-      >
-        {selectedTabIds.length > 0 ? "Deselect All" : "Select All"}
-      </Button>
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleOpenAllFiltered}
-        className="bg-gray-100 hover:bg-gray-200"
-      >
-        Open All ({filteredItems.length})
-      </Button>
-    </div>
-  );
 
   // Add helper functions for domain rules
   const getDomain = (url: string): string => {
@@ -1595,6 +1277,114 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
   }, []);
 
   console.log('Current tabs:', tabs);
+
+  // Add function to update tab activity
+  const updateTabActivity = (tabId: number) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, lastActiveTimestamp: Date.now() }
+          : tab,
+      ),
+    );
+  };
+
+  // Add effect to listen for tab activation
+  useEffect(() => {
+    const handleTabActivated = async (activeInfo: { tabId: number }) => {
+      updateTabActivity(activeInfo.tabId);
+    };
+
+    browser.tabs.onActivated.addListener(handleTabActivated);
+
+    return () => {
+      browser.tabs.onActivated.removeListener(handleTabActivated);
+    };
+  }, []);
+
+  // Add effect to update active tab timestamp periodically
+  useEffect(() => {
+    const updateActiveTabTimestamp = async () => {
+      const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (activeTab?.id) {
+        updateTabActivity(activeTab.id);
+      }
+    };
+
+    // Update every 5 seconds
+    const interval = setInterval(updateActiveTabTimestamp, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Add effect to save suspension settings when they change
+  useEffect(() => {
+    const saveSuspensionSettings = async () => {
+      try {
+        await browser.storage.local.set({ suspensionSettings });
+      } catch (error) {
+        console.error("Error saving suspension settings:", error);
+      }
+    };
+
+    saveSuspensionSettings();
+  }, [suspensionSettings]);
+
+  // Add effect to handle tab updates
+  useEffect(() => {
+    const handleTabUpdated = async (
+      tabId: number,
+      changeInfo: { status?: string; url?: string },
+    ) => {
+      if (changeInfo.status === "complete" || changeInfo.url) {
+        try {
+          const updatedTab = await browser.tabs.get(tabId);
+          setTabs((prevTabs) =>
+            prevTabs.map((tab) =>
+              tab.id === tabId
+                ? {
+                    ...tab,
+                    title: updatedTab.title,
+                    url: updatedTab.url,
+                    favIconUrl: updatedTab.favIconUrl,
+                    active: updatedTab.active,
+                    windowId: updatedTab.windowId,
+                    lastActiveTimestamp: Date.now(),
+                  }
+                : tab,
+          ));
+        } catch (error) {
+          console.error("Error updating tab:", error);
+        }
+      }
+    };
+
+    browser.tabs.onUpdated.addListener(handleTabUpdated);
+
+    return () => {
+      browser.tabs.onUpdated.removeListener(handleTabUpdated);
+    };
+  }, []);
+
+  // Add effect to handle tab removal
+  useEffect(() => {
+    const handleTabRemoved = (tabId: number) => {
+      setTabs((prevTabs) => prevTabs.filter((tab) => tab.id !== tabId));
+      setSelectedTabIds((prevIds) => prevIds.filter((id) => id !== tabId));
+    };
+
+    browser.tabs.onRemoved.addListener(handleTabRemoved);
+
+    return () => {
+      browser.tabs.onRemoved.removeListener(handleTabRemoved);
+    };
+  }, []);
+
+  // Update the Dialog's onOpenChange handler
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    setIsVisible(open);
+  };
 
   if (!isVisible) return null;
 
@@ -1820,11 +1610,210 @@ const App: React.FC<AppProps> = ({ initialTabs = [] }) => {
 
   // Render normal mode
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="dark:bg-gray-900 dark:text-white">
-        <TabDialog tabs={tabs} />
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={isVisible} onOpenChange={handleOpenChange}>
+        <DialogContent className="dark:bg-gray-900 dark:text-white">
+          <TabDialog 
+            tabs={tabs} 
+            onOpenSuspensionSettings={() => setShowSuspensionSettings(true)}
+            onSuspendTab={suspendTab}
+            onRestoreTab={restoreTab}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showSuspensionSettings} onOpenChange={setShowSuspensionSettings}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspension Settings</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="enabled">Enable Tab Suspension</Label>
+              <input
+                type="checkbox"
+                id="enabled"
+                checked={suspensionSettings.enabled}
+                onChange={(e) =>
+                  setSuspensionSettings({
+                    ...suspensionSettings,
+                    enabled: e.target.checked,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="defaultDelay">Default Delay (minutes)</Label>
+              <Input
+                type="number"
+                id="defaultDelay"
+                value={suspensionSettings.defaultDelay}
+                onChange={(e) =>
+                  setSuspensionSettings({
+                    ...suspensionSettings,
+                    defaultDelay: parseInt(e.target.value, 10),
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="memoryThreshold">Memory Threshold (MB)</Label>
+              <Input
+                type="number"
+                id="memoryThreshold"
+                value={Math.round(suspensionSettings.memoryThreshold / (1024 * 1024))}
+                onChange={(e) =>
+                  setSuspensionSettings({
+                    ...suspensionSettings,
+                    memoryThreshold: parseInt(e.target.value, 10) * 1024 * 1024,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fasterDelay">Faster Delay (minutes)</Label>
+              <Input
+                type="number"
+                id="fasterDelay"
+                value={suspensionSettings.fasterDelay}
+                onChange={(e) =>
+                  setSuspensionSettings({
+                    ...suspensionSettings,
+                    fasterDelay: parseInt(e.target.value, 10),
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Suspension Rules</Label>
+              <div className="space-y-2">
+                {suspensionSettings.rules.map((rule, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 border rounded"
+                  >
+                    <select
+                      value={rule.type}
+                      onChange={(e) => {
+                        const newRules = [...suspensionSettings.rules];
+                        newRules[index] = {
+                          ...rule,
+                          type: e.target.value as "domain" | "path",
+                        };
+                        setSuspensionSettings((prev) => ({
+                          ...prev,
+                          rules: newRules,
+                        }));
+                      }}
+                      className="px-2 py-1 rounded border"
+                    >
+                      <option value="domain">Domain</option>
+                      <option value="path">Path</option>
+                    </select>
+                    <Input
+                      value={rule.value}
+                      onChange={(e) => {
+                        const newRules = [...suspensionSettings.rules];
+                        newRules[index] = { ...rule, value: e.target.value };
+                        setSuspensionSettings((prev) => ({
+                          ...prev,
+                          rules: newRules,
+                        }));
+                      }}
+                      placeholder={
+                        rule.type === "domain" ? "example.com" : "/path"
+                      }
+                    />
+                    <select
+                      value={rule.action}
+                      onChange={(e) => {
+                        const newRules = [...suspensionSettings.rules];
+                        newRules[index] = {
+                          ...rule,
+                          action: e.target.value as "never" | "faster" | "normal",
+                        };
+                        setSuspensionSettings((prev) => ({
+                          ...prev,
+                          rules: newRules,
+                        }));
+                      }}
+                      className="px-2 py-1 rounded border"
+                    >
+                      <option value="never">Never Suspend</option>
+                      <option value="faster">Suspend Faster</option>
+                      <option value="normal">Normal Suspension</option>
+                    </select>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        const newRules = suspensionSettings.rules.filter(
+                          (_, i) => i !== index,
+                        );
+                        setSuspensionSettings((prev) => ({
+                          ...prev,
+                          rules: newRules,
+                        }));
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  onClick={() => {
+                    const newRule: SuspensionRule = {
+                      type: "domain",
+                      value: "",
+                      action: "never",
+                    };
+                    setSuspensionSettings((prev) => ({
+                      ...prev,
+                      rules: [...prev.rules, newRule],
+                    }));
+                  }}
+                >
+                  Add Rule
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSuspensionSettings(false)}
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                saveTabsData();
+                setShowSuspensionSettings(false);
+              }}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={handleOpenAllFiltered}
+        className="bg-gray-100 hover:bg-gray-200"
+      >
+        Open All ({filteredItems.length})
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowSuspensionSettings(true)}
+        className="bg-white hover:bg-gray-50"
+      >
+        Suspension Settings
+      </Button>
+    </>
   );
 };
 
