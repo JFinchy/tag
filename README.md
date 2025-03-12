@@ -60,38 +60,3 @@ https://github.com/emerysteele/CookieProfileSwitcher
 // search
 https://chromewebstore.google.com/detail/mdn-search/pdiegkghjahhhikafojgcmflngomilki
 https://github.com/hanguokai/mdn-search
-
-Notes
-Auto assign colors but offer to change
-Sponsor this project
-Save all to tag (maybe auto to date) - clean if not opened in so many days
-Popup view and tab view
-
-Ideas
-- Add tags to active tabs, recent history, include search functionality
-- Open tags in browser
-- See recent tags, open tags
-- Open tags but exclude certain tags
-- Set rules for certain domains
-- Suspend tabs
-- Have UI like Arc/Notion
-- Auto suggest new sites like stumble upon
-- Auto suggest tags
-- Do something cool with reading list? Set deadlines? Auto tag?
-- Show memory of each tab
-- Separate by different user archetypes 
-- Track how long it has been since a link has been used and a tag has been used. Allow for easy cleanup/removal
-- Cmd k for search
-  - Is there an option of doing this with another one? 
-- Notion like table with tags
-- Override history/bookmarks page
-  - What would I want this too look like
-- Open Workona site
-- Drag and drop
-- Don't allow the same tab to exist twice
-- Place same domains next to eachother
-  - Be careful to not make this jarring
-- Shorty click through to bookmark links. A way to allow users to have the same bookmark multiple times
-  - tag-manager.com/3r2lfdsdf3fds/?target=espn.com (with espn description and icon)
-- https://feature-sliced.design/ and https://github.com/moneyflow-dev/moneyflow/blob/main/src/app/app.tsx
-- Now let's make this a turbo monorepo and have a next app run in parallel. We should check for this website and send messages to it. The goal is for this to be a bigger better version of the modal

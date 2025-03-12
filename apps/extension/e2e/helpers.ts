@@ -6,7 +6,7 @@ export const test = base.extend<{
   extensionId: string;
 }>({
   context: async ({}, use) => {
-    const pathToExtension = path.join(__dirname, "my-extension");
+    const pathToExtension = path.join(__dirname, "../dist");
     const context = await chromium.launchPersistentContext("", {
       headless: false,
       args: [
@@ -18,14 +18,6 @@ export const test = base.extend<{
     await context.close();
   },
   extensionId: async ({ context }, use) => {
-    /*
-    // for manifest v2:
-    let [background] = context.backgroundPages()
-    if (!background)
-      background = await context.waitForEvent('backgroundpage')
-    */
-
-    // for manifest v3:
     let [background] = context.serviceWorkers();
     if (!background) background = await context.waitForEvent("serviceworker");
 
@@ -33,4 +25,19 @@ export const test = base.extend<{
     await use(extensionId);
   },
 });
+
 export const expect = test.expect;
+
+export const openDialog = async (context: BrowserContext) => {
+  // Create a new tab
+  const page = await context.newPage();
+  await page.goto("about:blank");
+
+  // Press Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+  const isMac = process.platform === "darwin";
+  await page.keyboard.press(isMac ? "Meta+K" : "Control+K");
+
+  // Wait for dialog to appear
+  const dialog = await page.waitForSelector('[role="dialog"]');
+  return { page, dialog };
+};

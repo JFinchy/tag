@@ -28,3 +28,11 @@ web-ext.config.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+.turbo/cookies
+.turbo/cache
+.turbo/tmp
+.turbo/tmp/
+.turbo/tmp/
+.turbo/tmp/
+.turbo/tmp/
