@@ -10,7 +10,19 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky || true",
     "test": "turbo test",
-    "type-check": "turbo type-check"
+    "type-check": "turbo type-check",
+    "update-check": "node scripts/check-updates.js",
+    "update-check:minor": "node scripts/check-updates.js --target minor",
+    "update-check:patch": "node scripts/check-updates.js --target patch",
+    "update-check:interactive": "node scripts/check-updates.js --interactive",
+    "update-deps": "node scripts/check-updates.js --upgrade",
+    "changeset": "changeset",
+    "changeset:add": "changeset add",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version",
+    "changeset:publish": "turbo build && changeset publish",
+    "changeset:check": "node scripts/check-changesets.js",
+    "release": "pnpm build && pnpm changeset:version && pnpm changeset:publish"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.3",
@@ -45,6 +57,7 @@
     "globals": "^16.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
+    "npm-check-updates": "^17.1.15",
     "prettier": "^3.2.5",
     "turbo": "^1.12.4",
     "typescript": "^5.8.2"
@@ -67,5 +80,9 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "@changesets/cli": "^2.28.1",
+    "@cspell/eslint-plugin": "^8.17.5"
   }
 }
