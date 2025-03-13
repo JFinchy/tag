@@ -398,14 +398,29 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
 
   // Add function to generate bookmark URL
   const generateBookmarkUrl = (originalUrl: string): string => {
-    const hash = Math.random().toString(36).substring(2, 15);
+    const hash = crypto.randomUUID();
     return `${window.location.origin}/bookmark/${hash}/?bookmark=${encodeURIComponent(originalUrl)}`;
+  };
+
+  // Add URL sanitization function
+  const sanitizeUrl = (url: string): string => {
+    try {
+      const parsed = new URL(url);
+      // Only allow http and https protocols
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error('Invalid protocol');
+      }
+      return parsed.toString();
+    } catch {
+      return 'about:blank';
+    }
   };
 
   // Update bookmark creation function
   const createBookmark = async (tab: Tab, tags: string[] = []) => {
     try {
-      const bookmarkUrl = generateBookmarkUrl(tab.url);
+      const sanitizedUrl = sanitizeUrl(tab.url);
+      const bookmarkUrl = generateBookmarkUrl(sanitizedUrl);
       const bookmarkNode = await browser.bookmarks.create({
         title: tab.customTitle || tab.title,
         url: bookmarkUrl,
@@ -415,7 +430,7 @@ const App: React.FC<AppProps> = ({ initialTabs = [], initialBookmarks = [] }) =>
         id: parseInt(bookmarkNode.id),
         title: tab.customTitle || tab.title,
         url: bookmarkUrl,
-        originalUrl: tab.url,
+        originalUrl: sanitizedUrl,
         favIconUrl: tab.favIconUrl,
         active: false,
         tags: [...(tab.tags || []), ...tags],
