@@ -36,3 +36,5 @@ web-ext.config.ts
 .turbo/tmp/
 .turbo/tmp/
 .turbo/tmp/
+
+dist/
